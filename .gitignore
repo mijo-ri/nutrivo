@@ -1,0 +1,44 @@
+# .NET build outputs and user-specific files
+**/bin/
+**/obj/
+*.user
+*.suo
+*.sln.docstates
+/artifacts/
+
+# Local IDE settings and caches
+.idea/
+.vs/
+
+# Test results and coverage
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# React Native / Expo
+node_modules/
+.expo/
+/mobile/nutrivo-app/dist/
+/mobile/nutrivo-app/web-build/
+*.tsbuildinfo
+
+# Local environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Optional local .NET configuration
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Logs
+*.log
+
+# macOS / Windows
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
