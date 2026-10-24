@@ -1,0 +1,104 @@
+# Shared defaults for the repository.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+tab_width = 4
+max_line_length = 90
+
+[*.cs]
+# Namespaces, imports, and local variables.
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# Allman braces and readable statement blocks.
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_prefer_braces = true:suggestion
+csharp_preserve_single_line_blocks = false
+csharp_preserve_single_line_statements = false
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+
+# Prefer statement bodies; keep auto-properties and short expression lambdas.
+csharp_style_expression_bodied_methods = false:suggestion
+csharp_style_expression_bodied_constructors = false:suggestion
+csharp_style_expression_bodied_operators = false:suggestion
+csharp_style_expression_bodied_local_functions = false:suggestion
+csharp_style_expression_bodied_properties = false:suggestion
+csharp_style_expression_bodied_indexers = false:suggestion
+csharp_style_expression_bodied_accessors = false:suggestion
+csharp_style_expression_bodied_lambdas = when_on_single_line:suggestion
+
+# Operators start continuation lines, including || and &&.
+dotnet_style_operator_placement_when_wrapping = beginning_of_line
+csharp_space_around_binary_operators = before_and_after
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_before_dot = false
+csharp_space_after_dot = false
+csharp_space_between_method_declaration_name_and_open_parenthesis = false
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+
+# Rider / ReSharper: wrap where syntax permits; indivisible tokens need review.
+resharper_csharp_wrap_lines = true
+resharper_csharp_max_line_length = 90
+resharper_csharp_keep_user_linebreaks = true
+resharper_csharp_continuous_indent_multiplier = 1
+resharper_csharp_align_multiline_parameter = false
+resharper_csharp_align_multiline_argument = false
+resharper_csharp_align_multiline_binary_expressions_chain = false
+resharper_csharp_align_multiline_calls_chain = false
+
+# Short signatures and calls stay inline; long or multiline lists are chopped.
+resharper_csharp_wrap_parameters_style = chop_if_long
+resharper_csharp_wrap_before_declaration_lpar = false
+resharper_csharp_wrap_after_declaration_lpar = true
+resharper_csharp_wrap_before_declaration_rpar = true
+resharper_csharp_wrap_arguments_style = chop_if_long
+resharper_csharp_wrap_before_invocation_lpar = false
+resharper_csharp_wrap_after_invocation_lpar = true
+resharper_csharp_wrap_before_invocation_rpar = true
+resharper_csharp_wrap_before_binary_opsign = true
+resharper_csharp_wrap_chained_binary_expressions = chop_if_long
+resharper_csharp_wrap_after_dot_in_method_calls = false
+resharper_csharp_wrap_chained_method_calls = chop_if_long
+resharper_csharp_wrap_before_first_method_call = true
+
+# Prevent Rider cleanup from preferring expression bodies or compact blocks.
+resharper_csharp_method_or_operator_body = block_body
+resharper_csharp_constructor_or_destructor_body = block_body
+resharper_csharp_local_function_body = block_body
+resharper_csharp_accessor_owner_body = accessors_with_block_body
+resharper_csharp_use_heuristics_for_body_style = false
+resharper_csharp_braces_for_ifelse = required
+resharper_csharp_braces_for_for = required
+resharper_csharp_braces_for_foreach = required
+resharper_csharp_braces_for_while = required
+resharper_csharp_braces_for_dowhile = required
+resharper_csharp_braces_for_using = required
+resharper_csharp_braces_for_lock = required
+resharper_csharp_braces_for_fixed = required
+resharper_csharp_place_simple_embedded_statement_on_same_line = false
+resharper_csharp_place_simple_embedded_block_on_same_line = false
+resharper_csharp_place_simple_method_on_single_line = false
+resharper_csharp_place_simple_accessor_on_single_line = false
+
+# Auto-properties stay inline; implemented accessors keep multiline blocks.
+resharper_csharp_keep_existing_declaration_block_arrangement = false
+resharper_csharp_place_abstract_accessorholder_on_single_line = true
+resharper_csharp_place_simple_accessorholder_on_single_line = false
