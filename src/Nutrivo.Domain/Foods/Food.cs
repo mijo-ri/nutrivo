@@ -13,12 +13,22 @@ public sealed class Food : AggregateRoot<FoodId>
         string? brand,
         ReferenceUnit referenceUnit,
         NutritionalValues nutritionalValues
+    ) : this(id, name, brand, referenceUnit)
+    {
+        NutritionalValues = nutritionalValues;
+    }
+
+    // Persistence supplies the nutritional values after binding the scalar properties.
+    private Food(
+        FoodId id,
+        string name,
+        string? brand,
+        ReferenceUnit referenceUnit
     ) : base(id)
     {
         Name = name;
         Brand = brand;
         ReferenceUnit = referenceUnit;
-        NutritionalValues = nutritionalValues;
     }
 
     public string Name { get; }
@@ -35,7 +45,7 @@ public sealed class Food : AggregateRoot<FoodId>
 
     public ReferenceUnit ReferenceUnit { get; }
 
-    public NutritionalValues NutritionalValues { get; }
+    public NutritionalValues NutritionalValues { get; } = null!;
 
     public static Result<Food> Create(
         string? name,
