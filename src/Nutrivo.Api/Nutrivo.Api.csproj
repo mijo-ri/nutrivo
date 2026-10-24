@@ -11,12 +11,12 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Endpoints\" />
+        <Folder Include="Endpoints\" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Nutrivo.Application\Nutrivo.Application.csproj" />
-      <ProjectReference Include="..\Nutrivo.Infrastructure\Nutrivo.Infrastructure.csproj" />
+        <ProjectReference Include="..\Nutrivo.Application\Nutrivo.Application.csproj" />
+        <ProjectReference Include="..\Nutrivo.Infrastructure\Nutrivo.Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

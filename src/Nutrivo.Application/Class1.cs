@@ -1,9 +1,5 @@
-﻿namespace
-    Nutrivo
-    .Application;
+namespace Nutrivo.Application;
 
-public
-    class
-    Class1
+public class Class1
 {
 }

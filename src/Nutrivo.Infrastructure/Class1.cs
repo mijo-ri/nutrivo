@@ -1,9 +1,5 @@
-﻿namespace
-    Nutrivo
-    .Infrastructure;
+namespace Nutrivo.Infrastructure;
 
-public
-    class
-    Class1
+public class Class1
 {
 }

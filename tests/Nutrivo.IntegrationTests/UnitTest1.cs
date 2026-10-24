@@ -1,4 +1,4 @@
-﻿namespace Nutrivo.IntegrationTests;
+namespace Nutrivo.IntegrationTests;
 
 public class UnitTest1
 {

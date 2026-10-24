@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -7,12 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Persistence\" />
+        <Folder Include="Persistence\" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Nutrivo.Application\Nutrivo.Application.csproj" />
-      <ProjectReference Include="..\Nutrivo.Domain\Nutrivo.Domain.csproj" />
+        <ProjectReference Include="..\Nutrivo.Application\Nutrivo.Application.csproj" />
+        <ProjectReference Include="..\Nutrivo.Domain\Nutrivo.Domain.csproj" />
     </ItemGroup>
 
 </Project>
