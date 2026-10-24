@@ -143,21 +143,21 @@ When a domain rule is unclear, state the ambiguity instead of inventing behaviou
 Do not modify unrelated code or perform broad refactorings without necessity.
 
 ## Initial Backlog
-1. create solution structure
-2. configure PostgreSQL and EF Core
-3. model `Food` and nutritional values
-4. implement `CreateFood`
-5. implement food search
-6. model diary entries
-7. implement `LogFood`
-8. implement daily diary query
-9. calculate daily totals
-10. build first React Native diary screen
-11. edit/delete entries
-12. add nutrition targets
-13. add recent foods and favourites
-14. add barcode integration
-15. add external food provider
-16. add voice tracking
-17. add authentication
-18. deploy a production-like environment
+[x] create solution structure
+[x] configure PostgreSQL and EF Core
+[x] model `Food` and nutritional values
+[ ] implement `CreateFood`
+[ ] implement food search
+[ ] model diary entries
+[ ] implement `LogFood`
+[ ] implement daily diary query
+[ ] calculate daily totals
+[ ] build first React Native diary screen
+[ ] edit/delete entries
+[ ] add nutrition targets
+[ ] add recent foods and favourites
+[ ] add barcode integration
+[ ] add external food provider
+[ ] add voice tracking
+[ ] add authentication
+[ ] deploy a production-like environment

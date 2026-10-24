@@ -1,8 +1,8 @@
 # Nutrivo
 
 A calorie and nutrition tracking app built with .NET 10, DDD and Clean Architecture.
-The current backend includes the Food domain and PostgreSQL persistence. Food use
-cases and endpoints will be added in subsequent slices.
+The current backend includes the Food domain, PostgreSQL persistence and a
+CreateFood command exposed through `POST /foods`.
 
 ## Local development
 
@@ -74,6 +74,41 @@ The launch profile selects `Development`; the console shows the API URL. OpenAPI
 is available at `/openapi/v1.json` in that environment. Starting the API does not
 apply migrations or create the database.
 
+### 5. Create a food
+
+With the API running under the default HTTP launch profile, send:
+
+```sh
+curl --fail-with-body http://localhost:5097/foods \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "name": "Rolled oats",
+    "brand": "Example",
+    "referenceUnit": 1,
+    "kilocalories": 372,
+    "proteinGrams": 13.5,
+    "carbohydratesGrams": 58.7,
+    "fatGrams": 7
+  }'
+```
+
+The response is `201 Created` with `{ "id": "<uuid>" }` after the food has been
+committed to PostgreSQL. No Location header is returned because a Food GET endpoint
+is not available yet.
+
+`referenceUnit` is `1` for grams or `2` for milliliters. All four nutritional values
+refer to exactly 100 grams or 100 milliliters, respectively. Every field except
+`brand` must be present. Nutrient values must be nonnegative numbers; explicit
+zeros are accepted, while missing or null nutrient values are rejected. Names and
+brands are trimmed, and an empty brand becomes null. The existing domain rules
+govern validation; foods with identical data may be created independently.
+
+Invalid inputs return `400 Bad Request` as `application/problem+json`. Domain
+validation responses include a stable `code` and a human-readable `detail`, for
+example `Food.Name.Required`. Malformed or incomplete JSON also returns Problem
+Details. Technical storage failures return `500` without internal error details.
+The endpoint does not require authentication.
+
 ### Stop PostgreSQL
 
 ```sh
@@ -133,9 +168,14 @@ migrations rather than `EnsureCreated` or an in-memory database.
 
 Tests cover Food materialization, typed IDs, both reference units, optional brand,
 shared immutable nutrition, exact decimal persistence and migration apply,
-reapply, rollback and rebuild. Domain tests continue to run without a database.
+reapply, rollback and rebuild. CreateFood application tests cover domain failures,
+normalization, cancellation and persistence failures without a database. HTTP
+integration tests exercise the real application and PostgreSQL, including stored
+values, required JSON fields, Problem Details responses and OpenAPI metadata.
+Domain tests continue to run without a database.
 
 ## Architecture decisions
 
 - [Food aggregate and reference basis](docs/adr/0001-food-aggregate.md)
 - [PostgreSQL and Food persistence](docs/adr/0002-postgresql-food-persistence.md)
+- [CreateFood command and HTTP endpoint](docs/adr/0003-create-food.md)
