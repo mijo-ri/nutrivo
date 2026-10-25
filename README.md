@@ -153,6 +153,24 @@ dotnet ef database update 0 \
 Rolling back `InitialCreate` drops `foods` and its contents. This command is for
 disposable local databases, not a data-preserving rollback strategy.
 
+## Formatting
+
+Use the pinned local JetBrains CleanupCode tool to apply the repository's
+`.editorconfig` rules, including the 90-character line limit and one argument or
+parameter per line for long lists. Run from the repository root:
+
+```sh
+dotnet tool restore
+dotnet jb cleanupcode "tests/Nutrivo.Application.Tests/Foods/CreateFoodCommandHandlerTests.cs"
+```
+
+Pass explicit paths to only the C# files created or modified for the task; multiple
+files can be passed in one invocation. File mode applies formatting only and does
+not require a solution argument or cleanup profile. Review the diff afterwards,
+then run the build and tests required for the change. Rider does not need to be
+running. The tool version is pinned in the local manifest with runtime roll-forward
+enabled so it can run with the project's .NET 10 installation.
+
 ## Validation
 
 ```sh

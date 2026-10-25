@@ -142,6 +142,14 @@ Prefer the simplest architecture supporting current requirements.
 When a domain rule is unclear, state the ambiguity instead of inventing behaviour.
 Do not modify unrelated code or perform broad refactorings without necessity.
 
+## Formatting
+- After creating or modifying C# code, run JetBrains CleanupCode before the final build and tests required for the task.
+- Run `dotnet tool restore` from the repository root if the local tools need restoring.
+- From the repository root, run `dotnet jb cleanupcode <File1.cs> <File2.cs>` with explicit, correctly quoted paths to only the C# files created or modified for the task. Do not pass the solution, directories or wildcards.
+- Use file mode, which applies formatting only, according to the repository's `.editorconfig`.
+- Review the diff after formatting and preserve unrelated changes already present in the working tree.
+- If the formatter is unavailable or fails, explicitly report the failure in the final response; do not claim formatting succeeded.
+
 ## Initial Backlog
 [x] create solution structure
 [x] configure PostgreSQL and EF Core
