@@ -13,6 +13,7 @@ public sealed class SearchFoodsEndpoint : IEndpoint
         endpoints
             .MapGet("/foods", HandleAsync)
             .WithName("SearchFoods")
+            .WithTags(Tags.Foods)
             .WithSummary(
                 "Searches foods by name or brand with paginated nutrition results."
             )

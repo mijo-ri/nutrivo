@@ -12,6 +12,7 @@ public sealed class CreateFoodEndpoint : IEndpoint
         endpoints
             .MapPost("/foods", HandleAsync)
             .WithName("CreateFood")
+            .WithTags(Tags.Foods)
             .WithSummary("Creates a food with nutrition per 100 grams or milliliters.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
