@@ -4,7 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Nutrivo.Api.Endpoints.Foods;
+using Nutrivo.Api.Endpoints.Foods.SearchFoods;
 using Nutrivo.Application.Foods;
 using Nutrivo.Application.Foods.SearchFoods;
 using Nutrivo.Domain.Foods;

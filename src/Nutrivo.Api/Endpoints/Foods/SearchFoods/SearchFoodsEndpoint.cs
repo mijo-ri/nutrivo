@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Foods.SearchFoods;
 
-namespace Nutrivo.Api.Endpoints.Foods;
+namespace Nutrivo.Api.Endpoints.Foods.SearchFoods;
 
 public sealed class SearchFoodsEndpoint : IEndpoint
 {

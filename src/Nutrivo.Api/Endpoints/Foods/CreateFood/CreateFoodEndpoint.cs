@@ -3,7 +3,7 @@ using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Foods.CreateFood;
 using Nutrivo.Domain.Foods;
 
-namespace Nutrivo.Api.Endpoints.Foods;
+namespace Nutrivo.Api.Endpoints.Foods.CreateFood;
 
 public sealed class CreateFoodEndpoint : IEndpoint
 {

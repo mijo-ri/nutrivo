@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Nutrivo.Domain.Foods;
 
-namespace Nutrivo.Api.Endpoints.Foods;
+namespace Nutrivo.Api.Endpoints.Foods.SearchFoods;
 
 public sealed record SearchFoodsResponse(
     ImmutableArray<SearchFoodResponse> Items,

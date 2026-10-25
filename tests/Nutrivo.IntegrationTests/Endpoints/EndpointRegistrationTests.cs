@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Api.Endpoints;
-using Nutrivo.Api.Endpoints.Foods;
+using Nutrivo.Api.Endpoints.Foods.CreateFood;
+using Nutrivo.Api.Endpoints.Foods.SearchFoods;
 using Nutrivo.Application.Foods;
 using Nutrivo.Domain.Foods;
 
