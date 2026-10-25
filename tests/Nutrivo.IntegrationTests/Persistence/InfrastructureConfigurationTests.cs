@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nutrivo.Application.Foods;
 using Nutrivo.Infrastructure;
 using Nutrivo.Infrastructure.Persistence;
 
@@ -56,6 +57,15 @@ public sealed class InfrastructureConfigurationTests
 
         Assert.Same(first, same);
         Assert.NotSame(first, second);
+        var search = firstScope.ServiceProvider.GetRequiredService<IFoodQueries>();
+        Assert.Same(
+            search,
+            firstScope.ServiceProvider.GetRequiredService<IFoodQueries>()
+        );
+        Assert.NotSame(
+            search,
+            secondScope.ServiceProvider.GetRequiredService<IFoodQueries>()
+        );
         Assert.Equal(
             "Npgsql.EntityFrameworkCore.PostgreSQL",
             first.Database.ProviderName

@@ -151,21 +151,21 @@ Do not modify unrelated code or perform broad refactorings without necessity.
 - If the formatter is unavailable or fails, explicitly report the failure in the final response; do not claim formatting succeeded.
 
 ## Initial Backlog
-[x] create solution structure
-[x] configure PostgreSQL and EF Core
-[x] model `Food` and nutritional values
-[ ] implement `CreateFood`
-[ ] implement food search
-[ ] model diary entries
-[ ] implement `LogFood`
-[ ] implement daily diary query
-[ ] calculate daily totals
-[ ] build first React Native diary screen
-[ ] edit/delete entries
-[ ] add nutrition targets
-[ ] add recent foods and favourites
-[ ] add barcode integration
-[ ] add external food provider
-[ ] add voice tracking
-[ ] add authentication
-[ ] deploy a production-like environment
+- [x] create solution structure
+- [x] configure PostgreSQL and EF Core
+- [x] model `Food` and nutritional values
+- [x] implement `CreateFood`
+- [x] implement food search
+- [ ] model diary entries
+- [ ] implement `LogFood`
+- [ ] implement daily diary query
+- [ ] calculate daily totals
+- [ ] build first React Native diary screen
+- [ ] edit/delete entries
+- [ ] add nutrition targets
+- [ ] add recent foods and favourites
+- [ ] add barcode integration
+- [ ] add external food provider
+- [ ] add voice tracking
+- [ ] add authentication
+- [ ] deploy a production-like environment

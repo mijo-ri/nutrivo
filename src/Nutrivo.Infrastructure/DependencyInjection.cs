@@ -29,6 +29,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString)
         );
         services.AddScoped<IFoodRepository, FoodRepository>();
+        services.AddScoped<IFoodQueries, FoodQueries>();
 
         return services;
     }

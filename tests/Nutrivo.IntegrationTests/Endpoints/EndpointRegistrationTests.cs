@@ -27,13 +27,18 @@ public sealed class EndpointRegistrationTests
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.IsType<CreateFoodEndpoint>(Assert.Single(endpoints));
+        Assert.Equal(2, endpoints.Length);
+        Assert.Single(endpoints.OfType<CreateFoodEndpoint>());
+        Assert.Single(endpoints.OfType<SearchFoodsEndpoint>());
         Assert.All(
             services,
             descriptor =>
                 Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime)
         );
-        Assert.Same(endpoints[0], sameEndpoints[0]);
+        for (var index = 0; index < endpoints.Length; index++)
+        {
+            Assert.Same(endpoints[index], sameEndpoints[index]);
+        }
     }
 
     [Fact]

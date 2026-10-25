@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Foods;
 using Nutrivo.Application.Foods.CreateFood;
+using Nutrivo.Application.Foods.SearchFoods;
 using Nutrivo.Domain.Common;
 using Nutrivo.Domain.Foods;
 
@@ -14,6 +15,7 @@ public sealed class DependencyInjectionTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IFoodRepository, UnusedFoodRepository>();
+        services.AddScoped<IFoodQueries, UnusedFoodQueries>();
 
         Assert.Same(services, services.AddApplication());
         services.AddApplication();
@@ -34,6 +36,24 @@ public sealed class DependencyInjectionTests
         Assert.IsType<CreateFoodCommandHandler>(first);
         Assert.Same(first, same);
         Assert.NotSame(first, second);
+        var query = firstScope.ServiceProvider
+            .GetRequiredService<IQueryHandler<SearchFoodsQuery, SearchFoodsResult>>();
+        Assert.IsType<SearchFoodsQueryHandler>(query);
+        Assert.Same(
+            query,
+            firstScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<SearchFoodsQuery, SearchFoodsResult>>()
+        );
+        Assert.NotSame(
+            query,
+            secondScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<SearchFoodsQuery, SearchFoodsResult>>()
+        );
+        Assert.Single(
+            services,
+            descriptor => descriptor.ServiceType
+                == typeof(IQueryHandler<SearchFoodsQuery, SearchFoodsResult>)
+        );
         Assert.Single(
             services,
             descriptor =>
@@ -196,6 +216,19 @@ public sealed class DependencyInjectionTests
     public sealed class UnusedFoodRepository : IFoodRepository
     {
         public Task AddAsync(Food food, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    public sealed class UnusedFoodQueries : IFoodQueries
+    {
+        public Task<SearchFoodsResult> SearchAsync(
+            string? search,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken
+        )
         {
             throw new NotSupportedException();
         }

@@ -2,7 +2,8 @@
 
 A calorie and nutrition tracking app built with .NET 10, DDD and Clean Architecture.
 The current backend includes the Food domain, PostgreSQL persistence and a
-CreateFood command exposed through `POST /foods`.
+CreateFood command exposed through `POST /foods` and a paginated Food search at
+`GET /foods`.
 
 ## Local development
 
@@ -98,8 +99,8 @@ curl --fail-with-body http://localhost:5097/foods \
 ```
 
 The response is `201 Created` with `{ "id": "<uuid>" }` after the food has been
-committed to PostgreSQL. No Location header is returned because a Food GET endpoint
-is not available yet.
+committed to PostgreSQL. No Location header is returned because a Food detail
+endpoint is not available yet.
 
 `referenceUnit` is `1` for grams or `2` for milliliters. All four nutritional values
 refer to exactly 100 grams or 100 milliliters, respectively. Every field except
@@ -113,6 +114,42 @@ validation responses include a stable `code` and a human-readable `detail`, for
 example `Food.Name.Required`. Malformed or incomplete JSON also returns Problem
 Details. Technical storage failures return `500` without internal error details.
 The endpoint does not require authentication.
+
+### 6. Search foods
+
+```sh
+curl --fail-with-body --get http://localhost:5097/foods \
+  --data-urlencode 'search=oats' \
+  --data-urlencode 'page=1' \
+  --data-urlencode 'pageSize=20'
+```
+
+`GET /foods` searches the stored name or optional brand for a case-insensitive,
+literal substring. Leading and trailing whitespace is trimmed. A missing, empty
+or whitespace-only `search` lists all foods. Single-character searches are valid;
+multiple words remain one contiguous search text. `%`, `_` and backslashes are
+ordinary characters. There is no fuzzy matching, accent transliteration or
+external lookup.
+
+Results are sorted case-insensitively by name, then brand (null treated as empty),
+using the database collation, then by ID. `page` defaults to 1 and must be at least
+1. `pageSize` defaults to 20 and must be between 1 and 100. The computed offset
+must fit in a signed 32-bit integer. Ordering is stable while the data is unchanged;
+the count and page are separate database reads without a shared snapshot.
+
+The `200 OK` response contains `items`, `page`, `pageSize` and `totalCount` (the
+number of all matching foods, before pagination). Each item includes `id`, `name`,
+`brand`, `referenceQuantity`, `referenceUnit`, `kilocalories`, `proteinGrams`,
+`carbohydratesGrams` and `fatGrams`. Nutrition retains its exact decimal values and
+refers to 100 grams (`referenceUnit: 1`) or milliliters (`referenceUnit: 2`).
+An empty database, no matches or a page beyond the results returns an empty
+`items` array. A page beyond the results still reports the matching `totalCount`.
+
+Invalid page values or offset overflow return `400 Problem Details` with code
+`SearchFoods.Page.Invalid`; invalid page sizes use `SearchFoods.PageSize.Invalid`.
+Malformed numeric parameters also return `400 Problem Details` through request
+binding. Technical storage failures return a generic `500` without internal
+details. Search requires no authentication and does not change stored foods.
 
 ### Stop PostgreSQL
 
@@ -197,8 +234,14 @@ integration tests exercise the real application and PostgreSQL, including stored
 values, required JSON fields, Problem Details responses and OpenAPI metadata.
 Domain tests continue to run without a database.
 
+Search tests cover normalization, pagination validation, overflow, cancellation
+and technical failures. PostgreSQL/API tests exercise literal name/brand matching,
+special characters, deterministic pagination, exact nutrition responses, foods
+created through POST, read-only projections, Problem Details and OpenAPI defaults.
+
 ## Architecture decisions
 
 - [Food aggregate and reference basis](docs/adr/0001-food-aggregate.md)
 - [PostgreSQL and Food persistence](docs/adr/0002-postgresql-food-persistence.md)
 - [CreateFood command and HTTP endpoint](docs/adr/0003-create-food.md)
+- [Food search and read access](docs/adr/0004-food-search.md)
