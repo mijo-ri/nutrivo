@@ -1,0 +1,174 @@
+using Microsoft.Extensions.DependencyInjection;
+using Nutrivo.Application.Abstractions;
+using Nutrivo.Application.Foods;
+using Nutrivo.Application.Foods.CreateFood;
+using Nutrivo.Domain.Common;
+using Nutrivo.Domain.Foods;
+
+namespace Nutrivo.Application.Tests;
+
+public sealed class DependencyInjectionTests
+{
+    [Fact]
+    public void AddApplication_RegistersApplicationHandlersByInterfaceAsScoped()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<IFoodRepository, UnusedFoodRepository>();
+
+        Assert.Same(services, services.AddApplication());
+        services.AddApplication();
+
+        using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
+        );
+        using var firstScope = provider.CreateScope();
+        using var secondScope = provider.CreateScope();
+
+        var first = firstScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>();
+        var same = firstScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>();
+        var second = secondScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>();
+
+        Assert.IsType<CreateFoodCommandHandler>(first);
+        Assert.Same(first, same);
+        Assert.NotSame(first, second);
+        Assert.Single(services, descriptor =>
+            descriptor.ServiceType == typeof(ICommandHandler<CreateFoodCommand, FoodId>));
+        Assert.DoesNotContain(services, descriptor =>
+            descriptor.ServiceType == typeof(CreateFoodCommand)
+            || descriptor.ServiceType == typeof(CreateFoodCommandHandler)
+            || descriptor.ImplementationType == typeof(CommandProcessor)
+            || descriptor.ImplementationType == typeof(QueryProcessor));
+        Assert.Throws<InvalidOperationException>(() => provider
+            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>());
+    }
+
+    [Fact]
+    public async Task AddHandlers_DiscoversCommandAndQueryContractsByInterface()
+    {
+        var services = new ServiceCollection();
+        DependencyInjection.AddHandlers(
+            services, [typeof(CommandProcessor), typeof(QueryProcessor)]
+        );
+        using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
+        );
+        using var firstScope = provider.CreateScope();
+        using var secondScope = provider.CreateScope();
+        var commandHandler = firstScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<TestCommand, string>>();
+        var queryHandler = firstScope.ServiceProvider
+            .GetRequiredService<IQueryHandler<TestQuery, string>>();
+
+        var commandResult = await commandHandler.HandleAsync(
+            new TestCommand(), CancellationToken.None
+        );
+        var queryResult = await queryHandler.HandleAsync(
+            new TestQuery(), CancellationToken.None
+        );
+
+        Assert.Equal("command", commandResult.Value);
+        Assert.Equal("query", queryResult.Value);
+        Assert.Same(commandHandler, firstScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<TestCommand, string>>());
+        Assert.Same(queryHandler, firstScope.ServiceProvider
+            .GetRequiredService<IQueryHandler<TestQuery, string>>());
+        Assert.NotSame(commandHandler, secondScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<TestCommand, string>>());
+        Assert.NotSame(queryHandler, secondScope.ServiceProvider
+            .GetRequiredService<IQueryHandler<TestQuery, string>>());
+    }
+
+    [Fact]
+    public void AddHandlers_IgnoresInterfacesAbstractAndOpenGenericTypesAndOtherServices()
+    {
+        var services = new ServiceCollection();
+
+        DependencyInjection.AddHandlers(services,
+        [
+            typeof(ICommandHandler<TestCommand, string>),
+            typeof(AbstractProcessor),
+            typeof(GenericProcessor<>),
+            typeof(UnusedFoodRepository),
+            typeof(TestCommand),
+            typeof(TestQuery)
+        ]);
+
+        Assert.Empty(services);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddHandlers_WithDuplicateImplementations_ExplainsAmbiguousContract(
+        bool query
+    )
+    {
+        var services = new ServiceCollection();
+        var first = query ? typeof(QueryProcessor) : typeof(CommandProcessor);
+        var duplicate = query
+            ? typeof(DuplicateQueryProcessor)
+            : typeof(DuplicateCommandProcessor);
+        var contract = query
+            ? typeof(IQueryHandler<TestQuery, string>)
+            : typeof(ICommandHandler<TestCommand, string>);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            DependencyInjection.AddHandlers(services, [first, duplicate]));
+
+        Assert.Contains(contract.ToString(), exception.Message);
+        Assert.Contains(first.FullName!, exception.Message);
+        Assert.Contains(duplicate.FullName!, exception.Message);
+        Assert.Empty(services);
+    }
+
+    public sealed record TestCommand;
+    public sealed record TestQuery;
+
+    public class CommandProcessor : ICommandHandler<TestCommand, string>
+    {
+        public Task<Result<string>> HandleAsync(
+            TestCommand command,
+            CancellationToken cancellationToken
+        )
+        {
+            return Task.FromResult(Result<string>.Success("command"));
+        }
+    }
+
+    public class QueryProcessor : IQueryHandler<TestQuery, string>
+    {
+        public Task<Result<string>> HandleAsync(
+            TestQuery query,
+            CancellationToken cancellationToken
+        )
+        {
+            return Task.FromResult(Result<string>.Success("query"));
+        }
+    }
+
+    public sealed class DuplicateCommandProcessor : CommandProcessor;
+    public sealed class DuplicateQueryProcessor : QueryProcessor;
+    public abstract class AbstractProcessor : CommandProcessor;
+
+    public sealed class GenericProcessor<T> : ICommandHandler<T, string>
+    {
+        public Task<Result<string>> HandleAsync(
+            T command,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    public sealed class UnusedFoodRepository : IFoodRepository
+    {
+        public Task AddAsync(Food food, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+    }
+}

@@ -1,9 +1,11 @@
+using Nutrivo.Application.Abstractions;
 using Nutrivo.Domain.Common;
 using Nutrivo.Domain.Foods;
 
 namespace Nutrivo.Application.Foods.CreateFood;
 
 public sealed class CreateFoodCommandHandler(IFoodRepository foodRepository)
+    : ICommandHandler<CreateFoodCommand, FoodId>
 {
     public async Task<Result<FoodId>> HandleAsync(
         CreateFoodCommand command,

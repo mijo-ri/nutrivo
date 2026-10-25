@@ -1,25 +1,25 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Foods.CreateFood;
+using Nutrivo.Domain.Foods;
 
 namespace Nutrivo.Api.Endpoints.Foods;
 
-public static class CreateFoodEndpoint
+public sealed class CreateFoodEndpoint : IEndpoint
 {
-    public static IEndpointRouteBuilder MapCreateFood(this IEndpointRouteBuilder endpoints)
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/foods", HandleAsync)
             .WithName("CreateFood")
             .WithSummary("Creates a food with nutrition per 100 grams or milliliters.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
-
-        return endpoints;
     }
 
     private static async Task<Results<Created<CreateFoodResponse>, ProblemHttpResult>>
         HandleAsync(
             CreateFoodRequest request,
-            CreateFoodCommandHandler handler,
+            ICommandHandler<CreateFoodCommand, FoodId> handler,
             CancellationToken cancellationToken
         )
     {

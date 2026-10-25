@@ -25,10 +25,24 @@ repository. A future use case that requires several writes in one transaction
 must revisit this persistence contract.
 
 POST /foods maps its own request DTO to the command and calls the scoped handler
-directly. CQRS is expressed through explicit commands and handlers; a mediator or
-dispatch framework would add dependencies without a current need. The response
+directly through ICommandHandler<CreateFoodCommand, FoodId>. CQRS is expressed
+through explicit commands and handlers; a mediator or dispatch framework would
+add dependencies without a current need. The response
 contains only the generated UUID, never the domain aggregate. It returns 201 only
 after the commit and omits Location until a corresponding GET endpoint exists.
+
+AddApplication scans only the Application assembly for concrete, closed
+implementations of ICommandHandler<,> and IQueryHandler<,>. Both contracts expose
+HandleAsync with Result<TResponse> and CancellationToken. Handlers are registered
+by their closed interfaces with scoped lifetimes; multiple implementations of
+the same contract are rejected. Commands and queries are not DI services.
+
+AddEndpoints scans only the API assembly for concrete, closed IEndpoint
+implementations. These are stateless singletons whose MapEndpoints methods are
+called once at startup by app.MapEndpoints(). Request dependencies are injected
+into HTTP handler parameters, not endpoint constructors. New handlers and
+endpoints therefore require no individual registrations in Program.cs. Scanning
+uses reflection without an additional scanning library or dispatch framework.
 
 Required JSON properties distinguish missing nutrients from known zero values.
 Domain failures produce 400 Problem Details with a stable code and descriptive
