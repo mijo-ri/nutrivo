@@ -24,11 +24,35 @@ public sealed class CreateFoodCommandHandler(IFoodRepository foodRepository)
             return Result<FoodId>.Failure(nutrition.Error!);
         }
 
+        var servings = new List<ServingSize>();
+        foreach (var input in command.ServingSizes ?? [])
+        {
+            if (input is null)
+            {
+                return Result<FoodId>.Failure(FoodErrors.ServingSizeRequired);
+            }
+
+            var serving = ServingSize.Create(
+                input.Quantity,
+                input.Unit,
+                input.Label,
+                input.EquivalentQuantity
+            );
+            if (serving.IsFailure)
+            {
+                return Result<FoodId>.Failure(serving.Error!);
+            }
+
+            servings.Add(serving.Value);
+        }
+
         var food = Food.Create(
             command.Name,
             command.Brand,
+            command.ReferenceQuantity,
             command.ReferenceUnit,
-            nutrition.Value
+            nutrition.Value,
+            servings
         );
 
         if (food.IsFailure)

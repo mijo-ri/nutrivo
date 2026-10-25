@@ -34,7 +34,22 @@ internal sealed class FoodConfiguration : IEntityTypeConfiguration<Food>
             .HasConversion<int>()
             .IsRequired();
 
-        builder.Ignore(food => food.ReferenceQuantity);
+        builder
+            .Property(food => food.ReferenceQuantity)
+            .HasColumnName("reference_quantity")
+            .HasColumnType("numeric")
+            .IsRequired();
+
+        builder
+            .HasMany(food => food.ServingSizes)
+            .WithOne()
+            .HasForeignKey("FoodId")
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+        builder
+            .Navigation(food => food.ServingSizes)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(food => food.ServingSizes).AutoInclude();
 
         var nutrition = builder.ComplexProperty(food => food.NutritionalValues);
         nutrition.IsRequired();

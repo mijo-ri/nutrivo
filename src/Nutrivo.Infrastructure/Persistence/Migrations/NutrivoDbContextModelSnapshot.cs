@@ -40,6 +40,10 @@ namespace Nutrivo.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<decimal>("ReferenceQuantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("reference_quantity");
+
                     b.Property<int>("ReferenceUnit")
                         .HasColumnType("integer")
                         .HasColumnName("reference_unit");
@@ -68,6 +72,61 @@ namespace Nutrivo.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("foods", "public");
+                });
+
+            modelBuilder.Entity("Nutrivo.Domain.Foods.ServingSize", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("EquivalentQuantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("equivalent_quantity");
+
+                    b.Property<Guid>("FoodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("food_id");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("label");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("unit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FoodId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("food_serving_sizes", "public");
+                });
+
+            modelBuilder.Entity("Nutrivo.Domain.Foods.ServingSize", b =>
+                {
+                    b.HasOne("Nutrivo.Domain.Foods.Food", null)
+                        .WithMany("ServingSizes")
+                        .HasForeignKey("FoodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Nutrivo.Domain.Foods.Food", b =>
+                {
+                    b.Navigation("ServingSizes");
                 });
 #pragma warning restore 612, 618
         }

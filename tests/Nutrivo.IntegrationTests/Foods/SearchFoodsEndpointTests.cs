@@ -188,6 +188,7 @@ public sealed class SearchFoodsEndpointTests(PostgreSqlFixture fixture)
             {
                 name = "Oats",
                 brand,
+                referenceQuantity = 100m,
                 referenceUnit = unit,
                 kilocalories = 372.123456789m,
                 proteinGrams = 13.567891234m,
@@ -206,7 +207,7 @@ public sealed class SearchFoodsEndpointTests(PostgreSqlFixture fixture)
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(4, json.EnumerateObject().Count());
         var item = Assert.Single(json.GetProperty("items").EnumerateArray());
-        Assert.Equal(9, item.EnumerateObject().Count());
+        Assert.Equal(10, item.EnumerateObject().Count());
         Assert.Equal(id, item.GetProperty("id").GetGuid());
         Assert.Equal("Oats", item.GetProperty("name").GetString());
         Assert.Equal(brand, item.GetProperty("brand").GetString());
@@ -353,6 +354,7 @@ public sealed class SearchFoodsEndpointTests(PostgreSqlFixture fixture)
         return Food.Create(
                 name,
                 brand,
+                100m,
                 ReferenceUnit.Gram,
                 NutritionalValues.Create(100m, 10m, 20m, 1m).Value
             )

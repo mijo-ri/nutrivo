@@ -8,6 +8,8 @@ public sealed record CreateFoodRequest
 
     public string? Brand { get; init; }
 
+    public required decimal ReferenceQuantity { get; init; }
+
     public required ReferenceUnit ReferenceUnit { get; init; }
 
     public required decimal Kilocalories { get; init; }
@@ -17,4 +19,14 @@ public sealed record CreateFoodRequest
     public required decimal CarbohydratesGrams { get; init; }
 
     public required decimal FatGrams { get; init; }
+
+    public IReadOnlyList<CreateServingSizeRequest?>? ServingSizes { get; init; }
+}
+
+public sealed record CreateServingSizeRequest
+{
+    public required decimal Quantity { get; init; }
+    public required string? Unit { get; init; }
+    public string? Label { get; init; }
+    public required decimal EquivalentQuantity { get; init; }
 }

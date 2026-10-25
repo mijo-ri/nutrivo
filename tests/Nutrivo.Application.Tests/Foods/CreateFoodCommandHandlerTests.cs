@@ -10,6 +10,7 @@ public sealed class CreateFoodCommandHandlerTests
     private static readonly CreateFoodCommand ValidCommand = new(
         " \tRolled  oats\n",
         " Example  brand ",
+        100m,
         ReferenceUnit.Gram,
         372.123456789m,
         13.5m,
@@ -78,9 +79,70 @@ public sealed class CreateFoodCommandHandlerTests
         );
     }
 
+    [Fact]
+    public async Task HandleAsync_WithServings_PersistsWholeAggregate()
+    {
+        var repository = new RecordingFoodRepository();
+        var handler = new CreateFoodCommandHandler(repository);
+        var command = ValidCommand with
+        {
+            ReferenceQuantity = 30m,
+            ServingSizes =
+            [
+                new(2m, " Stück ", " Mittel ", 116m),
+                new(0.5m, "Esslöffel", null, 7.5m)
+            ]
+        };
+
+        var result = await handler.HandleAsync(command, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var food = Assert.Single(repository.Foods);
+        Assert.Equal(30m, food.ReferenceQuantity);
+        Assert.Equal(2, food.ServingSizes.Count);
+        Assert.Equal("Stück", food.ServingSizes[0].Unit);
+        Assert.Equal("Mittel", food.ServingSizes[0].Label);
+        Assert.Equal(116m, food.ServingSizes[0].EquivalentQuantity);
+        Assert.NotEqual(Guid.Empty, food.ServingSizes[0].Id.Value);
+        Assert.NotEqual(food.ServingSizes[0].Id, food.ServingSizes[1].Id);
+    }
+
     public static TheoryData<CreateFoodCommand, DomainError> InvalidCommands => new()
     {
         { ValidCommand with { Name = null }, FoodErrors.NameRequired },
+        {
+            ValidCommand with { ReferenceQuantity = 0m },
+            FoodErrors.InvalidReferenceQuantity
+        },
+        { ValidCommand with { ServingSizes = [null] }, FoodErrors.ServingSizeRequired },
+        {
+            ValidCommand with { ServingSizes = [new(0m, "piece", null, 1m)] },
+            FoodErrors.InvalidServingQuantity
+        },
+        {
+            ValidCommand with { ServingSizes = [new(1m, " ", null, 1m)] },
+            FoodErrors.ServingUnitRequired
+        },
+        {
+            ValidCommand with { ServingSizes = [new(1m, "piece", null, -1m)] },
+            FoodErrors.InvalidEquivalentQuantity
+        },
+        {
+            ValidCommand with
+            {
+                Kilocalories = decimal.MaxValue, ReferenceQuantity = 1m,
+                ServingSizes = [new(1m, "piece", null, 2m)]
+            },
+            FoodErrors.NutritionOutOfRange
+        },
+        {
+            ValidCommand with
+            {
+                ServingSizes =
+                [new(1m, "piece", null, 1m), new(1m, "piece", null, 0m)]
+            },
+            FoodErrors.InvalidEquivalentQuantity
+        },
         { ValidCommand with { Name = " \t" }, FoodErrors.NameRequired },
         {
             ValidCommand with { Name = new string('a', 201) },

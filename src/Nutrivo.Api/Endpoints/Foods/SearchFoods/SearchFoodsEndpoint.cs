@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Foods.SearchFoods;
+using Nutrivo.Domain.Foods;
 
 namespace Nutrivo.Api.Endpoints.Foods.SearchFoods;
 
@@ -21,7 +22,10 @@ public sealed class SearchFoodsEndpoint : IEndpoint
                 "Matches a literal, case-insensitive substring of name or brand. "
                 + "Omitted or blank search lists all foods. Results are sorted by name, "
                 + "brand and ID. Page starts at 1; page size defaults to 20 and permits "
-                + "1 to 100 items. Nutrition is per 100 grams or milliliters."
+                + "1 to 100 items. Basis nutrition uses the food reference quantity "
+                + "in grams or milliliters. Serving sizes retain input order and include "
+                + "calculated nutrition for their entire quantity, rounded to two decimal "
+                + "places with midpoint ties away from zero."
             )
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
@@ -68,7 +72,21 @@ public sealed class SearchFoodsEndpoint : IEndpoint
                     item.Kilocalories,
                     item.ProteinGrams,
                     item.CarbohydratesGrams,
-                    item.FatGrams
+                    item.FatGrams,
+                    item
+                        .ServingSizes.Select(serving => new SearchServingSizeResponse(
+                                serving.Id,
+                                serving.Quantity,
+                                serving.Unit,
+                                serving.Label,
+                                serving.EquivalentQuantity,
+                                NutritionRounding.ForDisplay(serving.Kilocalories),
+                                NutritionRounding.ForDisplay(serving.ProteinGrams),
+                                NutritionRounding.ForDisplay(serving.CarbohydratesGrams),
+                                NutritionRounding.ForDisplay(serving.FatGrams)
+                            )
+                        )
+                        .ToImmutableArray()
                 )
             )
             .ToImmutableArray();

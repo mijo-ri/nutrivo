@@ -54,6 +54,7 @@ public sealed class EndpointRegistrationTests
             new
             {
                 name = "Oats",
+                referenceQuantity = 100m,
                 referenceUnit = 1,
                 kilocalories = 372m,
                 proteinGrams = 13.5m,
@@ -81,7 +82,7 @@ public sealed class EndpointRegistrationTests
         var food = paths.GetProperty("/foods").GetProperty("post");
         Assert.Equal("CreateFood", food.GetProperty("operationId").GetString());
         Assert.Equal(
-            "Creates a food with nutrition per 100 grams or milliliters.",
+            "Creates a food with a nutrition basis and optional serving sizes.",
             food.GetProperty("summary").GetString()
         );
         var responses = food.GetProperty("responses");

@@ -19,5 +19,18 @@ public sealed record SearchFoodResponse(
     decimal Kilocalories,
     decimal ProteinGrams,
     decimal CarbohydratesGrams,
+    decimal FatGrams,
+    ImmutableArray<SearchServingSizeResponse> ServingSizes
+);
+
+public sealed record SearchServingSizeResponse(
+    Guid Id,
+    decimal Quantity,
+    string Unit,
+    string? Label,
+    decimal EquivalentQuantity,
+    decimal Kilocalories,
+    decimal ProteinGrams,
+    decimal CarbohydratesGrams,
     decimal FatGrams
 );

@@ -90,6 +90,7 @@ curl --fail-with-body http://localhost:5097/foods \
   --data '{
     "name": "Rolled oats",
     "brand": "Example",
+    "referenceQuantity": 100,
     "referenceUnit": 1,
     "kilocalories": 372,
     "proteinGrams": 13.5,
@@ -102,12 +103,50 @@ The response is `201 Created` with `{ "id": "<uuid>" }` after the food has been
 committed to PostgreSQL. No Location header is returned because a Food detail
 endpoint is not available yet.
 
-`referenceUnit` is `1` for grams or `2` for milliliters. All four nutritional values
-refer to exactly 100 grams or 100 milliliters, respectively. Every field except
-`brand` must be present. Nutrient values must be nonnegative numbers; explicit
-zeros are accepted, while missing or null nutrient values are rejected. Names and
-brands are trimmed, and an empty brand becomes null. The existing domain rules
-govern validation; foods with identical data may be created independently.
+`referenceUnit` is `1` for grams or `2` for milliliters. `referenceQuantity` is
+required and may be any positive decimal. The four nutritional values refer to
+that entire quantity. All fields except `brand` and `servingSizes` must be present.
+Nutrient values must be nonnegative numbers; explicit zeros are accepted, while
+missing or null nutrient values are rejected. Names and brands are trimmed, and
+an empty brand becomes null. Foods with identical data may be created independently.
+
+A food can include multiple freely named serving sizes calculated from its common
+nutrition basis. For example, create an egg with nutrition per 100 g and two sizes
+(the nutrition and weights below are illustrative user inputs):
+
+```json
+{
+  "name": "Ei",
+  "referenceQuantity": 100,
+  "referenceUnit": 1,
+  "kilocalories": 150,
+  "proteinGrams": 12,
+  "carbohydratesGrams": 1,
+  "fatGrams": 10,
+  "servingSizes": [
+    { "quantity": 1, "unit": "Stück", "label": "Klein", "equivalentQuantity": 45 },
+    { "quantity": 2, "unit": "Stück", "label": "Mittel", "equivalentQuantity": 116 }
+  ]
+}
+```
+
+Each serving requires positive `quantity` and `equivalentQuantity` numbers and a
+nonblank free-text `unit`. `label` is optional. Unit and label are trimmed and
+limited to 200 characters; a blank label becomes null. `equivalentQuantity` uses
+the food's reference unit and describes the **entire** serving quantity: the two
+medium eggs above weigh 116 g together. The API does not infer weights or convert
+grams to milliliters. Units such as `Scheibe` and `Esslöffel` are also free text.
+Omitting `servingSizes` (or supplying null or an empty array) creates no servings;
+null entries inside the array are rejected.
+
+Calculated nutrition is `basis nutrient × equivalentQuantity / referenceQuantity`.
+The two medium eggs above therefore contain 174 kcal, 13.92 g protein, 1.16 g
+carbohydrates and 11.6 g fat together. Basis values and all input quantities are
+stored exactly. Calculations use decimal arithmetic without display rounding;
+serving nutrients in HTTP responses are rounded to two decimal places with
+midpoint ties away from zero. A serving whose calculated nutrition exceeds the
+decimal range is rejected during creation with
+`Food.ServingSize.Nutrition.OutOfRange`; no part of the food is saved.
 
 Invalid inputs return `400 Bad Request` as `application/problem+json`. Domain
 validation responses include a stable `code` and a human-readable `detail`, for
@@ -140,8 +179,13 @@ the count and page are separate database reads without a shared snapshot.
 The `200 OK` response contains `items`, `page`, `pageSize` and `totalCount` (the
 number of all matching foods, before pagination). Each item includes `id`, `name`,
 `brand`, `referenceQuantity`, `referenceUnit`, `kilocalories`, `proteinGrams`,
-`carbohydratesGrams` and `fatGrams`. Nutrition retains its exact decimal values and
-refers to 100 grams (`referenceUnit: 1`) or milliliters (`referenceUnit: 2`).
+`carbohydratesGrams`, `fatGrams` and `servingSizes`. Basis nutrition retains its
+exact decimal values and refers to `referenceQuantity` grams (`referenceUnit: 1`)
+or milliliters (`referenceUnit: 2`). Each serving includes its generated `id`,
+`quantity`, `unit`, `label`, `equivalentQuantity` and the same four nutrient fields
+calculated for that serving, rounded as described above. Servings retain input
+order. Foods without servings return `servingSizes: []`. Portions do not change
+food pagination or name/brand matching.
 An empty database, no matches or a page beyond the results returns an empty
 `items` array. A page beyond the results still reports the matching `totalCount`.
 
@@ -183,7 +227,16 @@ dotnet ef migrations has-pending-model-changes \
   -- --environment Development
 ```
 
-To roll back all migrations on a disposable database:
+`FoodServingSizes` upgrades existing foods with `referenceQuantity = 100` and no
+servings, preserving IDs, units and exact nutrition. The API now requires callers
+to supply `referenceQuantity`; old request bodies must be updated. Migrations are
+still applied explicitly, never automatically at API startup.
+
+A rollback of `FoodServingSizes` is rejected if any servings or reference
+quantities other than 100 exist, preventing data loss or changed interpretation
+of nutrition. Unchanged legacy foods can safely return to the previous schema.
+
+To roll back all migrations on a compatible disposable database:
 
 ```sh
 dotnet ef database update 0 \
@@ -232,7 +285,10 @@ reapply, rollback and rebuild. CreateFood application tests cover domain failure
 normalization, cancellation and persistence failures without a database. HTTP
 integration tests exercise the real application and PostgreSQL, including stored
 values, required JSON fields, Problem Details responses and OpenAPI metadata.
-Domain tests continue to run without a database.
+Domain tests continue to run without a database. Additional tests cover arbitrary
+reference amounts, freely named portions, whole-serving calculations, rounding,
+overflows, stable serving order and IDs, exact quantity persistence, migration of
+legacy data and rejection of unsafe rollbacks.
 
 Search tests cover normalization, pagination validation, overflow, cancellation
 and technical failures. PostgreSQL/API tests exercise literal name/brand matching,

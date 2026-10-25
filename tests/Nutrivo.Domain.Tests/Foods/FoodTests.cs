@@ -18,7 +18,7 @@ public class FoodTests
     {
         var nutrition = OatNutrition();
 
-        var result = Food.Create("Oats", "Example", unit, nutrition);
+        var result = Food.Create("Oats", "Example", 100m, unit, nutrition);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Oats", result.Value.Name);
@@ -35,6 +35,7 @@ public class FoodTests
         var result = Food.Create(
             " \tRolled  oats\n",
             "\nExample  brand \t",
+            100m,
             ReferenceUnit.Gram,
             OatNutrition()
         );
@@ -49,7 +50,7 @@ public class FoodTests
     [InlineData(" \t\n")]
     public void Create_WithoutName_ReturnsRequiredError(string? name)
     {
-        var result = Food.Create(name, null, ReferenceUnit.Gram, OatNutrition());
+        var result = Food.Create(name, null, 100m, ReferenceUnit.Gram, OatNutrition());
 
         Assert.True(result.IsFailure);
         Assert.Equal("Food.Name.Required", result.Error?.Code);
@@ -62,7 +63,13 @@ public class FoodTests
     {
         var name = new string('a', length);
 
-        var result = Food.Create($" {name} ", null, ReferenceUnit.Gram, OatNutrition());
+        var result = Food.Create(
+            $" {name} ",
+            null,
+            100m,
+            ReferenceUnit.Gram,
+            OatNutrition()
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(name, result.Value.Name);
@@ -74,6 +81,7 @@ public class FoodTests
         var result = Food.Create(
             new string('a', 201),
             null,
+            100m,
             ReferenceUnit.Gram,
             OatNutrition()
         );
@@ -88,7 +96,7 @@ public class FoodTests
     [InlineData(" \t\n")]
     public void Create_WithoutBrand_NormalizesBrandToNull(string? brand)
     {
-        var result = Food.Create("Oats", brand, ReferenceUnit.Gram, OatNutrition());
+        var result = Food.Create("Oats", brand, 100m, ReferenceUnit.Gram, OatNutrition());
 
         Assert.True(result.IsSuccess);
         Assert.Null(result.Value.Brand);
@@ -102,6 +110,7 @@ public class FoodTests
         var result = Food.Create(
             "Oats",
             $" {brand} ",
+            100m,
             ReferenceUnit.Gram,
             OatNutrition()
         );
@@ -116,6 +125,7 @@ public class FoodTests
         var result = Food.Create(
             "Oats",
             new string('a', 201),
+            100m,
             ReferenceUnit.Gram,
             OatNutrition()
         );
@@ -131,7 +141,7 @@ public class FoodTests
     [InlineData(int.MaxValue)]
     public void Create_WithUnsupportedUnit_ReturnsError(int unit)
     {
-        var result = Food.Create("Oats", null, (ReferenceUnit)unit, OatNutrition());
+        var result = Food.Create("Oats", null, 100m, (ReferenceUnit)unit, OatNutrition());
 
         Assert.True(result.IsFailure);
         Assert.Equal("Food.ReferenceUnit.Invalid", result.Error?.Code);
@@ -140,7 +150,7 @@ public class FoodTests
     [Fact]
     public void Create_WithoutNutrition_ReturnsError()
     {
-        var result = Food.Create("Oats", null, ReferenceUnit.Gram, null);
+        var result = Food.Create("Oats", null, 100m, ReferenceUnit.Gram, null);
 
         Assert.True(result.IsFailure);
         Assert.Equal("Food.NutritionalValues.Required", result.Error?.Code);
@@ -153,7 +163,7 @@ public class FoodTests
     {
         var nutrition = NutritionalValues.Create(0m, 0m, 0m, 0m).Value;
 
-        var result = Food.Create("Water", null, unit, nutrition);
+        var result = Food.Create("Water", null, 100m, unit, nutrition);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(nutrition, result.Value.NutritionalValues);
@@ -168,7 +178,7 @@ public class FoodTests
     {
         var nutrition = NutritionalValues.Create(1m, 60m, 60m, 60m).Value;
 
-        var result = Food.Create("Product", null, unit, nutrition);
+        var result = Food.Create("Product", null, 100m, unit, nutrition);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1m, result.Value.NutritionalValues.Kilocalories);
@@ -180,8 +190,10 @@ public class FoodTests
     {
         var nutrition = OatNutrition();
 
-        var first = Food.Create("Oats", "Example", ReferenceUnit.Gram, nutrition).Value;
-        var second = Food.Create("Oats", "Example", ReferenceUnit.Gram, nutrition).Value;
+        var first = Food.Create("Oats", "Example", 100m, ReferenceUnit.Gram, nutrition)
+            .Value;
+        var second = Food.Create("Oats", "Example", 100m, ReferenceUnit.Gram, nutrition)
+            .Value;
 
         Assert.NotEqual(first.Id, second.Id);
         Assert.NotEqual(first, second);
@@ -210,6 +222,7 @@ public class FoodTests
         var result = Food.Create(
             name,
             new string('b', brandLength),
+            100m,
             (ReferenceUnit)unit,
             null
         );

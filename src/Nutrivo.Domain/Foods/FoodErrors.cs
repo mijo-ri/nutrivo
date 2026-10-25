@@ -34,6 +34,56 @@ public static class FoodErrors
         "Nutritional values are required."
     );
 
+    public static readonly DomainError InvalidReferenceQuantity = new(
+        "Food.ReferenceQuantity.Invalid",
+        "The reference quantity must be positive."
+    );
+
+    public static readonly DomainError EmptyServingSizeId = new(
+        "ServingSize.Id.Empty",
+        "The serving size ID must not be empty."
+    );
+
+    public static readonly DomainError ServingSizeRequired = new(
+        "Food.ServingSize.Required",
+        "A serving size must not be null."
+    );
+
+    public static readonly DomainError DuplicateServingSizeId = new(
+        "Food.ServingSize.Id.Duplicate",
+        "Serving size IDs must be unique within a food."
+    );
+
+    public static readonly DomainError InvalidServingQuantity = new(
+        "ServingSize.Quantity.Invalid",
+        "The serving quantity must be positive."
+    );
+
+    public static readonly DomainError ServingUnitRequired = new(
+        "ServingSize.Unit.Required",
+        "The serving unit is required."
+    );
+
+    public static readonly DomainError ServingUnitTooLong = new(
+        "ServingSize.Unit.TooLong",
+        "The serving unit must not exceed 200 characters."
+    );
+
+    public static readonly DomainError ServingLabelTooLong = new(
+        "ServingSize.Label.TooLong",
+        "The serving label must not exceed 200 characters."
+    );
+
+    public static readonly DomainError InvalidEquivalentQuantity = new(
+        "ServingSize.EquivalentQuantity.Invalid",
+        "The equivalent quantity in the food reference unit must be positive."
+    );
+
+    public static readonly DomainError NutritionOutOfRange = new(
+        "Food.ServingSize.Nutrition.OutOfRange",
+        "The calculated serving nutrition exceeds the supported decimal range."
+    );
+
     public static readonly DomainError NegativeKilocalories = new(
         "NutritionalValues.Kilocalories.Negative",
         "Kilocalories must not be negative."
