@@ -70,9 +70,14 @@ connection string produces an explicit configuration error.
 dotnet run --project src/Nutrivo.Api
 ```
 
-The launch profile selects `Development`; the console shows the API URL. OpenAPI
-is available at `/openapi/v1.json` in that environment. Starting the API does not
-apply migrations or create the database.
+The launch profile selects `Development`; the console shows the API URL. Open
+[Swagger UI](http://localhost:5097/swagger) manually in your browser to explore
+the endpoints and execute requests with **Try it out**. With the `https` launch
+profile, use [Swagger UI over HTTPS](https://localhost:7179/swagger).
+
+Swagger UI and the OpenAPI document at `/openapi/v1.json` are available only in
+`Development`; both are unavailable in other environments. Starting the API does
+not apply migrations or create the database.
 
 ### 5. Create a food
 
