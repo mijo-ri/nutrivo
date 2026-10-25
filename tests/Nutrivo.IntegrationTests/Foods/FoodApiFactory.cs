@@ -15,7 +15,8 @@ internal sealed class FoodApiFactory(
         using var context = new NutrivoDbContext(databaseOptions);
         builder.UseEnvironment(environment);
         builder.UseSetting(
-            "ConnectionStrings:Nutrivo", context.Database.GetConnectionString()
+            "ConnectionStrings:Nutrivo",
+            context.Database.GetConnectionString()
         );
     }
 }

@@ -9,7 +9,8 @@ public sealed class CreateFoodEndpoint : IEndpoint
 {
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/foods", HandleAsync)
+        endpoints
+            .MapPost("/foods", HandleAsync)
             .WithName("CreateFood")
             .WithSummary("Creates a food with nutrition per 100 grams or milliliters.")
             .ProducesProblem(StatusCodes.Status400BadRequest)

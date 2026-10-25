@@ -6,10 +6,13 @@ public static class EndpointExtensions
 {
     public static IServiceCollection AddEndpoints(this IServiceCollection services)
     {
-        var endpointTypes = typeof(IEndpoint).Assembly.GetTypes()
-            .Where(type => type.IsClass && !type.IsAbstract
+        var endpointTypes = typeof(IEndpoint)
+            .Assembly.GetTypes()
+            .Where(type => type.IsClass
+                && !type.IsAbstract
                 && !type.ContainsGenericParameters
-                && typeof(IEndpoint).IsAssignableFrom(type))
+                && typeof(IEndpoint).IsAssignableFrom(type)
+            )
             .OrderBy(type => type.FullName);
 
         foreach (var type in endpointTypes)

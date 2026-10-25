@@ -17,14 +17,16 @@ public sealed class InfrastructureConfigurationTests
     )
     {
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Nutrivo"] = connectionString
-            })
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:Nutrivo"] = connectionString
+                }
+            )
             .Build();
 
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => new ServiceCollection().AddInfrastructure(configuration)
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new ServiceCollection().AddInfrastructure(configuration)
         );
 
         Assert.Contains("ConnectionStrings:Nutrivo", exception.Message);
@@ -35,10 +37,12 @@ public sealed class InfrastructureConfigurationTests
     public void AddInfrastructure_RegistersScopedPostgreSqlContext()
     {
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Nutrivo"] = "Host=localhost;Database=nutrivo"
-            })
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:Nutrivo"] = "Host=localhost;Database=nutrivo"
+                }
+            )
             .Build();
         using var services = new ServiceCollection()
             .AddInfrastructure(configuration)

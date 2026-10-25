@@ -17,17 +17,22 @@ public static class DependencyInjection
     )
     {
         var registrations = types
-            .Where(type => type.IsClass && !type.IsAbstract
-                && !type.ContainsGenericParameters)
-            .SelectMany(type => type.GetInterfaces()
+            .Where(type => type.IsClass
+                && !type.IsAbstract
+                && !type.ContainsGenericParameters
+            )
+            .SelectMany(type => type
+                .GetInterfaces()
                 .Where(IsHandlerInterface)
-                .Select(contract => new { Contract = contract, Implementation = type }))
+                .Select(contract => new { Contract = contract, Implementation = type })
+            )
             .GroupBy(registration => registration.Contract)
             .ToArray();
 
         foreach (var registration in registrations)
         {
-            var implementations = registration.Select(item => item.Implementation)
+            var implementations = registration
+                .Select(item => item.Implementation)
                 .Distinct()
                 .ToArray();
 

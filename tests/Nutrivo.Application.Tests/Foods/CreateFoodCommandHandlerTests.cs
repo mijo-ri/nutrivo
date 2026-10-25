@@ -8,8 +8,13 @@ namespace Nutrivo.Application.Tests.Foods;
 public sealed class CreateFoodCommandHandlerTests
 {
     private static readonly CreateFoodCommand ValidCommand = new(
-        " \tRolled  oats\n", " Example  brand ", ReferenceUnit.Gram,
-        372.123456789m, 13.5m, 58.7m, 7m
+        " \tRolled  oats\n",
+        " Example  brand ",
+        ReferenceUnit.Gram,
+        372.123456789m,
+        13.5m,
+        58.7m,
+        7m
     );
 
     [Theory]
@@ -24,7 +29,8 @@ public sealed class CreateFoodCommandHandlerTests
         using var cancellation = new CancellationTokenSource();
 
         var result = await handler.HandleAsync(
-            ValidCommand with { ReferenceUnit = unit }, cancellation.Token
+            ValidCommand with { ReferenceUnit = unit },
+            cancellation.Token
         );
 
         Assert.True(result.IsSuccess);
@@ -67,7 +73,8 @@ public sealed class CreateFoodCommandHandlerTests
         var food = Assert.Single(repository.Foods);
         Assert.Null(food.Brand);
         Assert.Equal(
-            NutritionalValues.Create(0m, 0m, 0m, 0m).Value, food.NutritionalValues
+            NutritionalValues.Create(0m, 0m, 0m, 0m).Value,
+            food.NutritionalValues
         );
     }
 
@@ -128,8 +135,8 @@ public sealed class CreateFoodCommandHandlerTests
         var repository = new RecordingFoodRepository { Failure = failure };
         var handler = new CreateFoodCommandHandler(repository);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => handler.HandleAsync(ValidCommand, CancellationToken.None)
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.HandleAsync(ValidCommand, CancellationToken.None)
         );
 
         Assert.Same(failure, exception);
@@ -143,8 +150,8 @@ public sealed class CreateFoodCommandHandlerTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => handler.HandleAsync(ValidCommand, cancellation.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            handler.HandleAsync(ValidCommand, cancellation.Token)
         );
 
         Assert.Empty(repository.Foods);

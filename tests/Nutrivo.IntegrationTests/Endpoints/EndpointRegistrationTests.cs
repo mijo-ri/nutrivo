@@ -28,8 +28,11 @@ public sealed class EndpointRegistrationTests
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
         Assert.IsType<CreateFoodEndpoint>(Assert.Single(endpoints));
-        Assert.All(services, descriptor =>
-            Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime));
+        Assert.All(
+            services,
+            descriptor =>
+                Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime)
+        );
         Assert.Same(endpoints[0], sameEndpoints[0]);
     }
 
@@ -40,15 +43,18 @@ public sealed class EndpointRegistrationTests
         await using var factory = CreateFactory(repository);
         using var client = CreateClient(factory);
 
-        using var response = await client.PostAsJsonAsync("/foods", new
-        {
-            name = "Oats",
-            referenceUnit = 1,
-            kilocalories = 372m,
-            proteinGrams = 13.5m,
-            carbohydratesGrams = 58.7m,
-            fatGrams = 7m
-        });
+        using var response = await client.PostAsJsonAsync(
+            "/foods",
+            new
+            {
+                name = "Oats",
+                referenceUnit = 1,
+                kilocalories = 372m,
+                proteinGrams = 13.5m,
+                carbohydratesGrams = 58.7m,
+                fatGrams = 7m
+            }
+        );
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -83,23 +89,28 @@ public sealed class EndpointRegistrationTests
     )
     {
         return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("Development");
-            builder.UseSetting(
-                "ConnectionStrings:Nutrivo", "Host=localhost;Database=unused"
-            );
-            builder.ConfigureServices(services =>
-                services.AddScoped<IFoodRepository>(_ => repository));
-        });
+            {
+                builder.UseEnvironment("Development");
+                builder.UseSetting(
+                    "ConnectionStrings:Nutrivo",
+                    "Host=localhost;Database=unused"
+                );
+                builder.ConfigureServices(services =>
+                    services.AddScoped<IFoodRepository>(_ => repository)
+                );
+            }
+        );
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory)
     {
-        return factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false
-        });
+        return factory.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost"),
+                AllowAutoRedirect = false
+            }
+        );
     }
 
     private sealed class RecordingFoodRepository : IFoodRepository

@@ -34,15 +34,23 @@ public sealed class DependencyInjectionTests
         Assert.IsType<CreateFoodCommandHandler>(first);
         Assert.Same(first, same);
         Assert.NotSame(first, second);
-        Assert.Single(services, descriptor =>
-            descriptor.ServiceType == typeof(ICommandHandler<CreateFoodCommand, FoodId>));
-        Assert.DoesNotContain(services, descriptor =>
-            descriptor.ServiceType == typeof(CreateFoodCommand)
-            || descriptor.ServiceType == typeof(CreateFoodCommandHandler)
-            || descriptor.ImplementationType == typeof(CommandProcessor)
-            || descriptor.ImplementationType == typeof(QueryProcessor));
+        Assert.Single(
+            services,
+            descriptor =>
+                descriptor.ServiceType
+                == typeof(ICommandHandler<CreateFoodCommand, FoodId>)
+        );
+        Assert.DoesNotContain(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(CreateFoodCommand)
+                || descriptor.ServiceType == typeof(CreateFoodCommandHandler)
+                || descriptor.ImplementationType == typeof(CommandProcessor)
+                || descriptor.ImplementationType == typeof(QueryProcessor)
+        );
         Assert.Throws<InvalidOperationException>(() => provider
-            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>());
+            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>()
+        );
     }
 
     [Fact]
@@ -50,7 +58,8 @@ public sealed class DependencyInjectionTests
     {
         var services = new ServiceCollection();
         DependencyInjection.AddHandlers(
-            services, [typeof(CommandProcessor), typeof(QueryProcessor)]
+            services,
+            [typeof(CommandProcessor), typeof(QueryProcessor)]
         );
         using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
@@ -63,22 +72,36 @@ public sealed class DependencyInjectionTests
             .GetRequiredService<IQueryHandler<TestQuery, string>>();
 
         var commandResult = await commandHandler.HandleAsync(
-            new TestCommand(), CancellationToken.None
+            new TestCommand(),
+            CancellationToken.None
         );
         var queryResult = await queryHandler.HandleAsync(
-            new TestQuery(), CancellationToken.None
+            new TestQuery(),
+            CancellationToken.None
         );
 
         Assert.Equal("command", commandResult.Value);
         Assert.Equal("query", queryResult.Value);
-        Assert.Same(commandHandler, firstScope.ServiceProvider
-            .GetRequiredService<ICommandHandler<TestCommand, string>>());
-        Assert.Same(queryHandler, firstScope.ServiceProvider
-            .GetRequiredService<IQueryHandler<TestQuery, string>>());
-        Assert.NotSame(commandHandler, secondScope.ServiceProvider
-            .GetRequiredService<ICommandHandler<TestCommand, string>>());
-        Assert.NotSame(queryHandler, secondScope.ServiceProvider
-            .GetRequiredService<IQueryHandler<TestQuery, string>>());
+        Assert.Same(
+            commandHandler,
+            firstScope.ServiceProvider
+                .GetRequiredService<ICommandHandler<TestCommand, string>>()
+        );
+        Assert.Same(
+            queryHandler,
+            firstScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<TestQuery, string>>()
+        );
+        Assert.NotSame(
+            commandHandler,
+            secondScope.ServiceProvider
+                .GetRequiredService<ICommandHandler<TestCommand, string>>()
+        );
+        Assert.NotSame(
+            queryHandler,
+            secondScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<TestQuery, string>>()
+        );
     }
 
     [Fact]
@@ -86,15 +109,17 @@ public sealed class DependencyInjectionTests
     {
         var services = new ServiceCollection();
 
-        DependencyInjection.AddHandlers(services,
-        [
-            typeof(ICommandHandler<TestCommand, string>),
-            typeof(AbstractProcessor),
-            typeof(GenericProcessor<>),
-            typeof(UnusedFoodRepository),
-            typeof(TestCommand),
-            typeof(TestQuery)
-        ]);
+        DependencyInjection.AddHandlers(
+            services,
+            [
+                typeof(ICommandHandler<TestCommand, string>),
+                typeof(AbstractProcessor),
+                typeof(GenericProcessor<>),
+                typeof(UnusedFoodRepository),
+                typeof(TestCommand),
+                typeof(TestQuery)
+            ]
+        );
 
         Assert.Empty(services);
     }
@@ -116,7 +141,8 @@ public sealed class DependencyInjectionTests
             : typeof(ICommandHandler<TestCommand, string>);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            DependencyInjection.AddHandlers(services, [first, duplicate]));
+            DependencyInjection.AddHandlers(services, [first, duplicate])
+        );
 
         Assert.Contains(contract.ToString(), exception.Message);
         Assert.Contains(first.FullName!, exception.Message);
@@ -125,6 +151,7 @@ public sealed class DependencyInjectionTests
     }
 
     public sealed record TestCommand;
+
     public sealed record TestQuery;
 
     public class CommandProcessor : ICommandHandler<TestCommand, string>
@@ -150,7 +177,9 @@ public sealed class DependencyInjectionTests
     }
 
     public sealed class DuplicateCommandProcessor : CommandProcessor;
+
     public sealed class DuplicateQueryProcessor : QueryProcessor;
+
     public abstract class AbstractProcessor : CommandProcessor;
 
     public sealed class GenericProcessor<T> : ICommandHandler<T, string>

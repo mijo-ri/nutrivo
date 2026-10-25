@@ -25,8 +25,8 @@ public static class DependencyInjection
             );
         }
 
-        services.AddDbContext<NutrivoDbContext>(
-            options => options.UseNpgsql(connectionString)
+        services.AddDbContext<NutrivoDbContext>(options =>
+            options.UseNpgsql(connectionString)
         );
         services.AddScoped<IFoodRepository, FoodRepository>();
 

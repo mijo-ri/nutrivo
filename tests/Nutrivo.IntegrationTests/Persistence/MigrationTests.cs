@@ -33,9 +33,13 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
 
         Assert.Empty(await context.Database.GetAppliedMigrationsAsync());
         Assert.Single(await context.Database.GetPendingMigrationsAsync());
-        Assert.True(await context.Database.SqlQuery<bool>(
-            $"SELECT to_regclass('public.foods') IS NULL AS \"Value\""
-        ).SingleAsync());
+        Assert.True(
+            await context
+                .Database.SqlQuery<bool>(
+                    $"SELECT to_regclass('public.foods') IS NULL AS \"Value\""
+                )
+                .SingleAsync()
+        );
 
         await context.Database.MigrateAsync();
 

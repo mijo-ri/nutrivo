@@ -60,11 +60,12 @@ public sealed class FoodPersistenceTests(PostgreSqlFixture fixture)
     {
         var options = await fixture.CreateDatabaseAsync();
         var nutrition = NutritionalValues.Create(
-            kilocalories,
-            protein,
-            carbohydrates,
-            fat
-        ).Value;
+                kilocalories,
+                protein,
+                carbohydrates,
+                fat
+            )
+            .Value;
         var food = Food.Create("Product", null, ReferenceUnit.Gram, nutrition).Value;
 
         await using (var context = new NutrivoDbContext(options))
@@ -112,11 +113,12 @@ public sealed class FoodPersistenceTests(PostgreSqlFixture fixture)
     {
         var options = await fixture.CreateDatabaseAsync();
         var food = Food.Create(
-            new string('ä', 200),
-            new string('ö', 200),
-            ReferenceUnit.Gram,
-            NutritionalValues.Create(0m, 0m, 0m, 0m).Value
-        ).Value;
+                new string('ä', 200),
+                new string('ö', 200),
+                ReferenceUnit.Gram,
+                NutritionalValues.Create(0m, 0m, 0m, 0m).Value
+            )
+            .Value;
 
         await using (var context = new NutrivoDbContext(options))
         {

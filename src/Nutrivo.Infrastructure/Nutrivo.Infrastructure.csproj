@@ -7,13 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Nutrivo.Application\Nutrivo.Application.csproj" />
-        <ProjectReference Include="..\Nutrivo.Domain\Nutrivo.Domain.csproj" />
+        <ProjectReference Include="..\Nutrivo.Application\Nutrivo.Application.csproj"/>
+        <ProjectReference Include="..\Nutrivo.Domain\Nutrivo.Domain.csproj"/>
     </ItemGroup>
 
 </Project>

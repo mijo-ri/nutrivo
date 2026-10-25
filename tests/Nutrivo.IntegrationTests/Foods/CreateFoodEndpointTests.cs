@@ -87,7 +87,8 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
         var saved = await context.Foods.AsNoTracking().SingleAsync();
         Assert.Null(saved.Brand);
         Assert.Equal(
-            NutritionalValues.Create(0m, 0m, 0m, 0m).Value, saved.NutritionalValues
+            NutritionalValues.Create(0m, 0m, 0m, 0m).Value,
+            saved.NutritionalValues
         );
     }
 
@@ -123,7 +124,9 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
 
         var problem = await AssertProblemAsync(response, HttpStatusCode.BadRequest);
         Assert.Equal(expectedCode, problem.GetProperty("code").GetString());
-        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("detail").GetString()));
+        Assert.False(
+            string.IsNullOrWhiteSpace(problem.GetProperty("detail").GetString())
+        );
         await AssertDatabaseEmptyAsync(options);
     }
 
@@ -132,7 +135,9 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
 
     public static IEnumerable<object[]> InvalidRequests()
     {
-        foreach (var property in new[] { "name", "referenceUnit" }.Concat(NutrientProperties))
+        foreach (var property in new[] { "name", "referenceUnit" }.Concat(
+                     NutrientProperties
+                 ))
         {
             var payload = JsonNode.Parse(ValidJson)!.AsObject();
             payload.Remove(property);
@@ -177,19 +182,26 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
         var options = await CreateDatabaseAsync();
         await using var factory = new FoodApiFactory(options, environment);
         await using var failingFactory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
             {
-                services.AddScoped<IFoodRepository, FailingFoodRepository>();
-            });
-        });
+                builder.ConfigureServices(services =>
+                    {
+                        services.AddScoped<IFoodRepository, FailingFoodRepository>();
+                    }
+                );
+            }
+        );
         using var client = CreateClient(failingFactory);
-        using var content = new StringContent(ValidJson, Encoding.UTF8, "application/json");
+        using var content = new StringContent(
+            ValidJson,
+            Encoding.UTF8,
+            "application/json"
+        );
 
         using var response = await client.PostAsync("/foods", content);
 
         var problem = await AssertProblemAsync(
-            response, HttpStatusCode.InternalServerError
+            response,
+            HttpStatusCode.InternalServerError
         );
         Assert.DoesNotContain("secret-storage-details", problem.GetRawText());
         Assert.DoesNotContain("InvalidOperationException", problem.GetRawText());
@@ -206,7 +218,9 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
 
         var document = await client.GetFromJsonAsync<JsonElement>("/openapi/v1.json");
 
-        var operation = document.GetProperty("paths").GetProperty("/foods")
+        var operation = document
+            .GetProperty("paths")
+            .GetProperty("/foods")
             .GetProperty("post");
         Assert.Equal("CreateFood", operation.GetProperty("operationId").GetString());
         var responses = operation.GetProperty("responses");
@@ -225,11 +239,13 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory)
     {
-        return factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false
-        });
+        return factory.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost"),
+                AllowAutoRedirect = false
+            }
+        );
     }
 
     private static async Task<JsonElement> AssertProblemAsync(
@@ -239,7 +255,8 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
     {
         Assert.Equal(expectedStatus, response.StatusCode);
         Assert.Equal(
-            "application/problem+json", response.Content.Headers.ContentType?.MediaType
+            "application/problem+json",
+            response.Content.Headers.ContentType?.MediaType
         );
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal((int)expectedStatus, problem.GetProperty("status").GetInt32());

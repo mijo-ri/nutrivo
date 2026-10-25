@@ -9,9 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<RouteHandlerOptions>(options =>
-{
-    options.ThrowOnBadRequest = false;
-});
+    {
+        options.ThrowOnBadRequest = false;
+    }
+);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpoints();

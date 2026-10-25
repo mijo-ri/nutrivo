@@ -108,11 +108,12 @@ public class NutritionalValuesTests
         decimal[] values = [100m, 1m, 2m, 3m];
         values[index] += 0.01m;
         var second = NutritionalValues.Create(
-            values[0],
-            values[1],
-            values[2],
-            values[3]
-        ).Value;
+                values[0],
+                values[1],
+                values[2],
+                values[3]
+            )
+            .Value;
 
         Assert.NotEqual(first, second);
         Assert.False(first == second);

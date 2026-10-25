@@ -1,17 +1,17 @@
 <Solution>
     <Folder Name="/Solution Items/">
-        <File Path=".editorconfig" />
-        <File Path="README.md" />
+        <File Path=".editorconfig"/>
+        <File Path="README.md"/>
     </Folder>
     <Folder Name="/src/">
-        <Project Path="src/Nutrivo.Api/Nutrivo.Api.csproj" />
-        <Project Path="src/Nutrivo.Application/Nutrivo.Application.csproj" />
-        <Project Path="src/Nutrivo.Domain/Nutrivo.Domain.csproj" />
-        <Project Path="src/Nutrivo.Infrastructure/Nutrivo.Infrastructure.csproj" />
+        <Project Path="src/Nutrivo.Api/Nutrivo.Api.csproj"/>
+        <Project Path="src/Nutrivo.Application/Nutrivo.Application.csproj"/>
+        <Project Path="src/Nutrivo.Domain/Nutrivo.Domain.csproj"/>
+        <Project Path="src/Nutrivo.Infrastructure/Nutrivo.Infrastructure.csproj"/>
     </Folder>
     <Folder Name="/tests/">
-        <Project Path="tests/Nutrivo.Application.Tests/Nutrivo.Application.Tests.csproj" />
-        <Project Path="tests/Nutrivo.Domain.Tests/Nutrivo.Domain.Tests.csproj" />
-        <Project Path="tests/Nutrivo.IntegrationTests/Nutrivo.IntegrationTests.csproj" />
+        <Project Path="tests/Nutrivo.Application.Tests/Nutrivo.Application.Tests.csproj"/>
+        <Project Path="tests/Nutrivo.Domain.Tests/Nutrivo.Domain.Tests.csproj"/>
+        <Project Path="tests/Nutrivo.IntegrationTests/Nutrivo.IntegrationTests.csproj"/>
     </Folder>
 </Solution>
