@@ -156,7 +156,7 @@ Do not modify unrelated code or perform broad refactorings without necessity.
 - [x] model `Food` and nutritional values
 - [x] implement `CreateFood`
 - [x] implement food search
-- [ ] model diary entries
+- [x] model diary entries
 - [ ] implement `LogFood`
 - [ ] implement daily diary query
 - [ ] calculate daily totals
