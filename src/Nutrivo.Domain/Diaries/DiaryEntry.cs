@@ -13,24 +13,43 @@ public sealed class DiaryEntry : AggregateRoot<DiaryEntryId>
         NutritionalValues nutritionalValues,
         ServingSizeSnapshot? servingSizeSnapshot,
         decimal? servingCount
-    ) : base(DiaryEntryId.New())
+    ) : this(
+        DiaryEntryId.New(),
+        date,
+        mealType,
+        quantity,
+        foodSnapshot.ReferenceUnit,
+        servingCount
+    )
+    {
+        FoodSnapshot = foodSnapshot;
+        NutritionalValues = nutritionalValues;
+        ServingSizeSnapshot = servingSizeSnapshot;
+    }
+
+    // Persistence binds scalars here and supplies snapshots and nutrition afterwards.
+    private DiaryEntry(
+        DiaryEntryId id,
+        DateOnly date,
+        MealType mealType,
+        decimal quantity,
+        ReferenceUnit referenceUnit,
+        decimal? servingCount
+    ) : base(id)
     {
         Date = date;
         MealType = mealType;
-        FoodSnapshot = foodSnapshot;
         Quantity = quantity;
-        ReferenceUnit = foodSnapshot.ReferenceUnit;
-        NutritionalValues = nutritionalValues;
-        ServingSizeSnapshot = servingSizeSnapshot;
+        ReferenceUnit = referenceUnit;
         ServingCount = servingCount;
     }
 
     public DateOnly Date { get; }
     public MealType MealType { get; }
-    public FoodSnapshot FoodSnapshot { get; }
+    public FoodSnapshot FoodSnapshot { get; } = null!;
     public decimal Quantity { get; }
     public ReferenceUnit ReferenceUnit { get; }
-    public NutritionalValues NutritionalValues { get; }
+    public NutritionalValues NutritionalValues { get; } = null!;
     public ServingSizeSnapshot? ServingSizeSnapshot { get; }
     public decimal? ServingCount { get; }
 

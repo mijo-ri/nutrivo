@@ -23,6 +23,58 @@ namespace Nutrivo.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Nutrivo.Domain.Diaries.DiaryEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<int>("MealType")
+                        .HasColumnType("integer")
+                        .HasColumnName("meal_type");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("quantity");
+
+                    b.Property<int>("ReferenceUnit")
+                        .HasColumnType("integer")
+                        .HasColumnName("reference_unit");
+
+                    b.Property<decimal?>("ServingCount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("serving_count");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "NutritionalValues", "Nutrivo.Domain.Diaries.DiaryEntry.NutritionalValues#NutritionalValues", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("CarbohydratesGrams")
+                                .HasColumnType("numeric")
+                                .HasColumnName("consumed_carbohydrates_grams");
+
+                            b1.Property<decimal>("FatGrams")
+                                .HasColumnType("numeric")
+                                .HasColumnName("consumed_fat_grams");
+
+                            b1.Property<decimal>("Kilocalories")
+                                .HasColumnType("numeric")
+                                .HasColumnName("consumed_kilocalories");
+
+                            b1.Property<decimal>("ProteinGrams")
+                                .HasColumnType("numeric")
+                                .HasColumnName("consumed_protein_grams");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.ToTable("diary_entries", "public");
+                });
+
             modelBuilder.Entity("Nutrivo.Domain.Foods.Food", b =>
                 {
                     b.Property<Guid>("Id")
@@ -113,6 +165,118 @@ namespace Nutrivo.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("food_serving_sizes", "public");
+                });
+
+            modelBuilder.Entity("Nutrivo.Domain.Diaries.DiaryEntry", b =>
+                {
+                    b.OwnsOne("Nutrivo.Domain.Diaries.FoodSnapshot", "FoodSnapshot", b1 =>
+                        {
+                            b1.Property<Guid>("DiaryEntryId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Brand")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("food_brand");
+
+                            b1.Property<Guid>("FoodId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("food_id");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("food_name");
+
+                            b1.Property<decimal>("ReferenceQuantity")
+                                .HasColumnType("numeric")
+                                .HasColumnName("food_reference_quantity");
+
+                            b1.Property<int>("ReferenceUnit")
+                                .HasColumnType("integer")
+                                .HasColumnName("food_reference_unit");
+
+                            b1.HasKey("DiaryEntryId");
+
+                            b1.ToTable("diary_entries", "public");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DiaryEntryId");
+
+                            b1.OwnsOne("Nutrivo.Domain.Foods.NutritionalValues", "NutritionalValues", b2 =>
+                                {
+                                    b2.Property<Guid>("FoodSnapshotDiaryEntryId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<decimal>("CarbohydratesGrams")
+                                        .HasColumnType("numeric")
+                                        .HasColumnName("food_carbohydrates_grams");
+
+                                    b2.Property<decimal>("FatGrams")
+                                        .HasColumnType("numeric")
+                                        .HasColumnName("food_fat_grams");
+
+                                    b2.Property<decimal>("Kilocalories")
+                                        .HasColumnType("numeric")
+                                        .HasColumnName("food_kilocalories");
+
+                                    b2.Property<decimal>("ProteinGrams")
+                                        .HasColumnType("numeric")
+                                        .HasColumnName("food_protein_grams");
+
+                                    b2.HasKey("FoodSnapshotDiaryEntryId");
+
+                                    b2.ToTable("diary_entries", "public");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("FoodSnapshotDiaryEntryId");
+                                });
+
+                            b1.Navigation("NutritionalValues")
+                                .IsRequired();
+                        });
+
+                    b.OwnsOne("Nutrivo.Domain.Diaries.ServingSizeSnapshot", "ServingSizeSnapshot", b1 =>
+                        {
+                            b1.Property<Guid>("DiaryEntryId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("EquivalentQuantity")
+                                .HasColumnType("numeric")
+                                .HasColumnName("serving_equivalent_quantity");
+
+                            b1.Property<string>("Label")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("serving_label");
+
+                            b1.Property<decimal>("Quantity")
+                                .HasColumnType("numeric")
+                                .HasColumnName("serving_quantity");
+
+                            b1.Property<Guid>("ServingSizeId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("serving_size_id");
+
+                            b1.Property<string>("Unit")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("serving_unit");
+
+                            b1.HasKey("DiaryEntryId");
+
+                            b1.ToTable("diary_entries", "public");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DiaryEntryId");
+                        });
+
+                    b.Navigation("FoodSnapshot")
+                        .IsRequired();
+
+                    b.Navigation("ServingSizeSnapshot");
                 });
 
             modelBuilder.Entity("Nutrivo.Domain.Foods.ServingSize", b =>

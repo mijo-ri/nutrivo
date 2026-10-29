@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nutrivo.Application.Diaries;
 using Nutrivo.Application.Foods;
 using Nutrivo.Infrastructure;
 using Nutrivo.Infrastructure.Persistence;
@@ -57,6 +57,25 @@ public sealed class InfrastructureConfigurationTests
 
         Assert.Same(first, same);
         Assert.NotSame(first, second);
+        var entries =
+            firstScope.ServiceProvider.GetRequiredService<IDiaryEntryRepository>();
+        Assert.Same(
+            entries,
+            firstScope.ServiceProvider.GetRequiredService<IDiaryEntryRepository>()
+        );
+        Assert.NotSame(
+            entries,
+            secondScope.ServiceProvider.GetRequiredService<IDiaryEntryRepository>()
+        );
+        var foods = firstScope.ServiceProvider.GetRequiredService<IFoodRepository>();
+        Assert.Same(
+            foods,
+            firstScope.ServiceProvider.GetRequiredService<IFoodRepository>()
+        );
+        Assert.NotSame(
+            foods,
+            secondScope.ServiceProvider.GetRequiredService<IFoodRepository>()
+        );
         var search = firstScope.ServiceProvider.GetRequiredService<IFoodQueries>();
         Assert.Same(
             search,

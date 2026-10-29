@@ -42,7 +42,10 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             _container.GetConnectionString()
         )
         {
-            Database = databaseName
+            Database = databaseName,
+            // Each test has a distinct database; idle per-database pools would
+            // otherwise exhaust the container's connection limit as the suite grows.
+            Pooling = false
         };
 
         return new DbContextOptionsBuilder<NutrivoDbContext>()

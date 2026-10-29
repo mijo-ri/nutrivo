@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Application.Abstractions;
+using Nutrivo.Application.Diaries;
+using Nutrivo.Application.Diaries.LogFood;
+using Nutrivo.Domain.Diaries;
 using Nutrivo.Application.Foods;
 using Nutrivo.Application.Foods.CreateFood;
 using Nutrivo.Application.Foods.SearchFoods;
@@ -15,6 +18,7 @@ public sealed class DependencyInjectionTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IFoodRepository, UnusedFoodRepository>();
+        services.AddScoped<IDiaryEntryRepository, UnusedDiaryEntryRepository>();
         services.AddScoped<IFoodQueries, UnusedFoodQueries>();
 
         Assert.Same(services, services.AddApplication());
@@ -32,6 +36,25 @@ public sealed class DependencyInjectionTests
             .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>();
         var second = secondScope.ServiceProvider
             .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>();
+
+        var log = firstScope.ServiceProvider
+            .GetRequiredService<ICommandHandler<LogFoodCommand, DiaryEntryId>>();
+        Assert.IsType<LogFoodCommandHandler>(log);
+        Assert.Same(
+            log,
+            firstScope.ServiceProvider
+                .GetRequiredService<ICommandHandler<LogFoodCommand, DiaryEntryId>>()
+        );
+        Assert.NotSame(
+            log,
+            secondScope.ServiceProvider
+                .GetRequiredService<ICommandHandler<LogFoodCommand, DiaryEntryId>>()
+        );
+        Assert.Single(
+            services,
+            descriptor => descriptor.ServiceType
+                == typeof(ICommandHandler<LogFoodCommand, DiaryEntryId>)
+        );
 
         Assert.IsType<CreateFoodCommandHandler>(first);
         Assert.Same(first, same);
@@ -68,8 +91,8 @@ public sealed class DependencyInjectionTests
                 || descriptor.ImplementationType == typeof(CommandProcessor)
                 || descriptor.ImplementationType == typeof(QueryProcessor)
         );
-        Assert.Throws<InvalidOperationException>(() => provider
-            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>()
+        Assert.Throws<InvalidOperationException>(provider
+            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>
         );
     }
 
@@ -81,7 +104,7 @@ public sealed class DependencyInjectionTests
             services,
             [typeof(CommandProcessor), typeof(QueryProcessor)]
         );
-        using var provider = services.BuildServiceProvider(
+        await using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
         );
         using var firstScope = provider.CreateScope();
@@ -170,11 +193,11 @@ public sealed class DependencyInjectionTests
         Assert.Empty(services);
     }
 
-    public sealed record TestCommand;
+    private sealed record TestCommand;
 
-    public sealed record TestQuery;
+    private sealed record TestQuery;
 
-    public class CommandProcessor : ICommandHandler<TestCommand, string>
+    private class CommandProcessor : ICommandHandler<TestCommand, string>
     {
         public Task<Result<string>> HandleAsync(
             TestCommand command,
@@ -185,7 +208,7 @@ public sealed class DependencyInjectionTests
         }
     }
 
-    public class QueryProcessor : IQueryHandler<TestQuery, string>
+    private class QueryProcessor : IQueryHandler<TestQuery, string>
     {
         public Task<Result<string>> HandleAsync(
             TestQuery query,
@@ -196,13 +219,13 @@ public sealed class DependencyInjectionTests
         }
     }
 
-    public sealed class DuplicateCommandProcessor : CommandProcessor;
+    private sealed class DuplicateCommandProcessor : CommandProcessor;
 
-    public sealed class DuplicateQueryProcessor : QueryProcessor;
+    private sealed class DuplicateQueryProcessor : QueryProcessor;
 
-    public abstract class AbstractProcessor : CommandProcessor;
+    private abstract class AbstractProcessor : CommandProcessor;
 
-    public sealed class GenericProcessor<T> : ICommandHandler<T, string>
+    private sealed class GenericProcessor<T> : ICommandHandler<T, string>
     {
         public Task<Result<string>> HandleAsync(
             T command,
@@ -213,8 +236,21 @@ public sealed class DependencyInjectionTests
         }
     }
 
+    public sealed class UnusedDiaryEntryRepository : IDiaryEntryRepository
+    {
+        public Task AddAsync(DiaryEntry entry, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     public sealed class UnusedFoodRepository : IFoodRepository
     {
+        public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task AddAsync(Food food, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();

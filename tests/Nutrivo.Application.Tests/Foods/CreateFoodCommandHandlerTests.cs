@@ -107,71 +107,86 @@ public sealed class CreateFoodCommandHandlerTests
         Assert.NotEqual(food.ServingSizes[0].Id, food.ServingSizes[1].Id);
     }
 
-    public static TheoryData<CreateFoodCommand, DomainError> InvalidCommands => new()
+    public static TheoryData<CreateFoodCommand, DomainError> InvalidCommands
     {
-        { ValidCommand with { Name = null }, FoodErrors.NameRequired },
+        get
         {
-            ValidCommand with { ReferenceQuantity = 0m },
-            FoodErrors.InvalidReferenceQuantity
-        },
-        { ValidCommand with { ServingSizes = [null] }, FoodErrors.ServingSizeRequired },
-        {
-            ValidCommand with { ServingSizes = [new(0m, "piece", null, 1m)] },
-            FoodErrors.InvalidServingQuantity
-        },
-        {
-            ValidCommand with { ServingSizes = [new(1m, " ", null, 1m)] },
-            FoodErrors.ServingUnitRequired
-        },
-        {
-            ValidCommand with { ServingSizes = [new(1m, "piece", null, -1m)] },
-            FoodErrors.InvalidEquivalentQuantity
-        },
-        {
-            ValidCommand with
+            return new TheoryData<CreateFoodCommand, DomainError>
             {
-                Kilocalories = decimal.MaxValue, ReferenceQuantity = 1m,
-                ServingSizes = [new(1m, "piece", null, 2m)]
-            },
-            FoodErrors.NutritionOutOfRange
-        },
-        {
-            ValidCommand with
-            {
-                ServingSizes =
-                [new(1m, "piece", null, 1m), new(1m, "piece", null, 0m)]
-            },
-            FoodErrors.InvalidEquivalentQuantity
-        },
-        { ValidCommand with { Name = " \t" }, FoodErrors.NameRequired },
-        {
-            ValidCommand with { Name = new string('a', 201) },
-            FoodErrors.NameTooLong
-        },
-        {
-            ValidCommand with { Brand = new string('b', 201) },
-            FoodErrors.BrandTooLong
-        },
-        {
-            ValidCommand with { ReferenceUnit = (ReferenceUnit)0 },
-            FoodErrors.InvalidReferenceUnit
-        },
-        { ValidCommand with { Kilocalories = -1m }, FoodErrors.NegativeKilocalories },
-        { ValidCommand with { ProteinGrams = -1m }, FoodErrors.NegativeProtein },
-        {
-            ValidCommand with { CarbohydratesGrams = -1m },
-            FoodErrors.NegativeCarbohydrates
-        },
-        { ValidCommand with { FatGrams = -1m }, FoodErrors.NegativeFat },
-        {
-            ValidCommand with { Name = null, Kilocalories = -1m, ProteinGrams = -1m },
-            FoodErrors.NegativeKilocalories
-        },
-        {
-            ValidCommand with { Name = null, ReferenceUnit = (ReferenceUnit)0 },
-            FoodErrors.NameRequired
+                { ValidCommand with { Name = null }, FoodErrors.NameRequired },
+                {
+                    ValidCommand with { ReferenceQuantity = 0m },
+                    FoodErrors.InvalidReferenceQuantity
+                },
+                {
+                    ValidCommand with { ServingSizes = [null] },
+                    FoodErrors.ServingSizeRequired
+                },
+                {
+                    ValidCommand with { ServingSizes = [new(0m, "piece", null, 1m)] },
+                    FoodErrors.InvalidServingQuantity
+                },
+                {
+                    ValidCommand with { ServingSizes = [new(1m, " ", null, 1m)] },
+                    FoodErrors.ServingUnitRequired
+                },
+                {
+                    ValidCommand with { ServingSizes = [new(1m, "piece", null, -1m)] },
+                    FoodErrors.InvalidEquivalentQuantity
+                },
+                {
+                    ValidCommand with
+                    {
+                        Kilocalories = decimal.MaxValue, ReferenceQuantity = 1m,
+                        ServingSizes = [new(1m, "piece", null, 2m)]
+                    },
+                    FoodErrors.NutritionOutOfRange
+                },
+                {
+                    ValidCommand with
+                    {
+                        ServingSizes =
+                        [new(1m, "piece", null, 1m), new(1m, "piece", null, 0m)]
+                    },
+                    FoodErrors.InvalidEquivalentQuantity
+                },
+                { ValidCommand with { Name = " \t" }, FoodErrors.NameRequired },
+                {
+                    ValidCommand with { Name = new string('a', 201) },
+                    FoodErrors.NameTooLong
+                },
+                {
+                    ValidCommand with { Brand = new string('b', 201) },
+                    FoodErrors.BrandTooLong
+                },
+                {
+                    ValidCommand with { ReferenceUnit = 0 },
+                    FoodErrors.InvalidReferenceUnit
+                },
+                {
+                    ValidCommand with { Kilocalories = -1m },
+                    FoodErrors.NegativeKilocalories
+                },
+                { ValidCommand with { ProteinGrams = -1m }, FoodErrors.NegativeProtein },
+                {
+                    ValidCommand with { CarbohydratesGrams = -1m },
+                    FoodErrors.NegativeCarbohydrates
+                },
+                { ValidCommand with { FatGrams = -1m }, FoodErrors.NegativeFat },
+                {
+                    ValidCommand with
+                    {
+                        Name = null, Kilocalories = -1m, ProteinGrams = -1m
+                    },
+                    FoodErrors.NegativeKilocalories
+                },
+                {
+                    ValidCommand with { Name = null, ReferenceUnit = 0 },
+                    FoodErrors.NameRequired
+                }
+            };
         }
-    };
+    }
 
     [Theory]
     [MemberData(nameof(InvalidCommands))]
@@ -226,6 +241,11 @@ public sealed class CreateFoodCommandHandlerTests
         public CancellationToken CancellationToken { get; private set; }
 
         public Exception? Failure { get; init; }
+
+        public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public Task AddAsync(Food food, CancellationToken cancellationToken)
         {

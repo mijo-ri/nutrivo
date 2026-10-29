@@ -157,7 +157,7 @@ Do not modify unrelated code or perform broad refactorings without necessity.
 - [x] implement `CreateFood`
 - [x] implement food search
 - [x] model diary entries
-- [ ] implement `LogFood`
+- [x] implement `LogFood`
 - [ ] implement daily diary query
 - [ ] calculate daily totals
 - [ ] build first React Native diary screen

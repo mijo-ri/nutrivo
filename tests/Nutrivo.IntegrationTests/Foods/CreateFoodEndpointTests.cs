@@ -94,21 +94,36 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
         );
     }
 
-    public static TheoryData<string, string, string> InvalidDomainInputs => new()
+    public static TheoryData<string, string, string> InvalidDomainInputs
     {
-        { "name", "null", "Food.Name.Required" },
-        { "name", "\"   \"", "Food.Name.Required" },
-        { "name", JsonSerializer.Serialize(new string('a', 201)), "Food.Name.TooLong" },
-        { "brand", JsonSerializer.Serialize(new string('b', 201)), "Food.Brand.TooLong" },
-        { "referenceQuantity", "0", "Food.ReferenceQuantity.Invalid" },
-        { "referenceQuantity", "-1", "Food.ReferenceQuantity.Invalid" },
-        { "referenceUnit", "0", "Food.ReferenceUnit.Invalid" },
-        { "referenceUnit", "3", "Food.ReferenceUnit.Invalid" },
-        { "kilocalories", "-1", "NutritionalValues.Kilocalories.Negative" },
-        { "proteinGrams", "-1", "NutritionalValues.ProteinGrams.Negative" },
-        { "carbohydratesGrams", "-1", "NutritionalValues.CarbohydratesGrams.Negative" },
-        { "fatGrams", "-1", "NutritionalValues.FatGrams.Negative" }
-    };
+        get
+        {
+            return new TheoryData<string, string, string>
+            {
+                { "name", "null", "Food.Name.Required" },
+                { "name", "\"   \"", "Food.Name.Required" },
+                {
+                    "name", JsonSerializer.Serialize(new string('a', 201)),
+                    "Food.Name.TooLong"
+                },
+                {
+                    "brand", JsonSerializer.Serialize(new string('b', 201)),
+                    "Food.Brand.TooLong"
+                },
+                { "referenceQuantity", "0", "Food.ReferenceQuantity.Invalid" },
+                { "referenceQuantity", "-1", "Food.ReferenceQuantity.Invalid" },
+                { "referenceUnit", "0", "Food.ReferenceUnit.Invalid" },
+                { "referenceUnit", "3", "Food.ReferenceUnit.Invalid" },
+                { "kilocalories", "-1", "NutritionalValues.Kilocalories.Negative" },
+                { "proteinGrams", "-1", "NutritionalValues.ProteinGrams.Negative" },
+                {
+                    "carbohydratesGrams", "-1",
+                    "NutritionalValues.CarbohydratesGrams.Negative"
+                },
+                { "fatGrams", "-1", "NutritionalValues.FatGrams.Negative" }
+            };
+        }
+    }
 
     [Theory]
     [MemberData(nameof(InvalidDomainInputs))]
@@ -331,37 +346,43 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
         Assert.Equal(150.005m, stored.NutritionalValues.Kilocalories);
     }
 
-    public static TheoryData<string, string?> InvalidServings => new()
+    public static TheoryData<string, string?> InvalidServings
     {
-        { "[null]", "Food.ServingSize.Required" },
-        { "[{}]", null },
-        { """[{"quantity":1,"unit":"piece"}]""", null },
+        get
         {
-            """[{"quantity":0,"unit":"piece","equivalentQuantity":1}]""",
-            "ServingSize.Quantity.Invalid"
-        },
-        {
-            """[{"quantity":1,"unit":null,"equivalentQuantity":1}]""",
-            "ServingSize.Unit.Required"
-        },
-        {
-            """[{"quantity":1,"unit":" ","equivalentQuantity":1}]""",
-            "ServingSize.Unit.Required"
-        },
-        {
-            """[{"quantity":1,"unit":"piece","equivalentQuantity":-1}]""",
-            "ServingSize.EquivalentQuantity.Invalid"
-        },
-        {
-            """
-            [
-              {"quantity":1,"unit":"piece","equivalentQuantity":1},
-              {"quantity":1,"unit":"piece","equivalentQuantity":0}
-            ]
-            """,
-            "ServingSize.EquivalentQuantity.Invalid"
+            return new TheoryData<string, string?>
+            {
+                { "[null]", "Food.ServingSize.Required" },
+                { "[{}]", null },
+                { """[{"quantity":1,"unit":"piece"}]""", null },
+                {
+                    """[{"quantity":0,"unit":"piece","equivalentQuantity":1}]""",
+                    "ServingSize.Quantity.Invalid"
+                },
+                {
+                    """[{"quantity":1,"unit":null,"equivalentQuantity":1}]""",
+                    "ServingSize.Unit.Required"
+                },
+                {
+                    """[{"quantity":1,"unit":" ","equivalentQuantity":1}]""",
+                    "ServingSize.Unit.Required"
+                },
+                {
+                    """[{"quantity":1,"unit":"piece","equivalentQuantity":-1}]""",
+                    "ServingSize.EquivalentQuantity.Invalid"
+                },
+                {
+                    """
+                    [
+                      {"quantity":1,"unit":"piece","equivalentQuantity":1},
+                      {"quantity":1,"unit":"piece","equivalentQuantity":0}
+                    ]
+                    """,
+                    "ServingSize.EquivalentQuantity.Invalid"
+                }
+            };
         }
-    };
+    }
 
     [Theory]
     [MemberData(nameof(InvalidServings))]
@@ -454,6 +475,11 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
 
     private sealed class FailingFoodRepository : IFoodRepository
     {
+        public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task AddAsync(Food food, CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("secret-storage-details");

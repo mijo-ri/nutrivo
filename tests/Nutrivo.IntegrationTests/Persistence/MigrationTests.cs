@@ -22,10 +22,11 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
         await context.Database.MigrateAsync();
 
         var applied = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.Equal(2, applied.Length);
-        Assert.EndsWith("_FoodServingSizes", applied[^1]);
+        Assert.Equal(3, applied.Length);
+        Assert.EndsWith("_DiaryEntries", applied[^1]);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.Equal(0, await context.Foods.CountAsync());
+        Assert.Equal(0, await context.DiaryEntries.CountAsync());
 
         await context.Database.MigrateAsync();
 
@@ -35,11 +36,11 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
         await migrator.MigrateAsync(Migration.InitialDatabase);
 
         Assert.Empty(await context.Database.GetAppliedMigrationsAsync());
-        Assert.Equal(2, (await context.Database.GetPendingMigrationsAsync()).Count());
+        Assert.Equal(3, (await context.Database.GetPendingMigrationsAsync()).Count());
         Assert.True(
             await context
                 .Database.SqlQuery<bool>(
-                    $"SELECT to_regclass('public.foods') IS NULL AS \"Value\""
+                    $"SELECT to_regclass('public.foods') IS NULL AND to_regclass('public.diary_entries') IS NULL AS \"Value\""
                 )
                 .SingleAsync()
         );
@@ -48,6 +49,7 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
 
         Assert.Equal(applied, await context.Database.GetAppliedMigrationsAsync());
         Assert.Equal(0, await context.Foods.CountAsync());
+        Assert.Equal(0, await context.DiaryEntries.CountAsync());
         Assert.False(context.Database.HasPendingModelChanges());
     }
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Api.Endpoints;
+using Nutrivo.Api.Endpoints.Diaries.LogFood;
 using Nutrivo.Api.Endpoints.Foods.CreateFood;
 using Nutrivo.Api.Endpoints.Foods.SearchFoods;
 using Nutrivo.Application.Foods;
@@ -28,7 +29,8 @@ public sealed class EndpointRegistrationTests
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.Equal(2, endpoints.Length);
+        Assert.Equal(3, endpoints.Length);
+        Assert.Single(endpoints.OfType<LogFoodEndpoint>());
         Assert.Single(endpoints.OfType<CreateFoodEndpoint>());
         Assert.Single(endpoints.OfType<SearchFoodsEndpoint>());
         Assert.All(
@@ -123,6 +125,11 @@ public sealed class EndpointRegistrationTests
     private sealed class RecordingFoodRepository : IFoodRepository
     {
         public List<Food> Foods { get; } = [];
+
+        public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public Task AddAsync(Food food, CancellationToken cancellationToken)
         {

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nutrivo.Application.Diaries;
 using Nutrivo.Application.Foods;
 using Nutrivo.Infrastructure.Persistence;
 using Nutrivo.Infrastructure.Persistence.Repositories;
@@ -29,6 +30,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString)
         );
         services.AddScoped<IFoodRepository, FoodRepository>();
+        services.AddScoped<IDiaryEntryRepository, DiaryEntryRepository>();
         services.AddScoped<IFoodQueries, FoodQueries>();
 
         return services;
