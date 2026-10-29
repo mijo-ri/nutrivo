@@ -81,6 +81,11 @@ resharper_csharp_wrap_after_dot_in_method_calls = false
 resharper_csharp_wrap_chained_method_calls = chop_if_long
 resharper_csharp_wrap_before_first_method_call = true
 
+# Initializers: one member per line.
+resharper_csharp_wrap_object_and_collection_initializer_style = chop_always
+resharper_csharp_keep_existing_initializer_arrangement = false
+resharper_csharp_place_simple_initializer_on_single_line = false
+
 # Prevent Rider cleanup from preferring expression bodies or compact blocks.
 resharper_csharp_method_or_operator_body = block_body
 resharper_csharp_constructor_or_destructor_body = block_body
