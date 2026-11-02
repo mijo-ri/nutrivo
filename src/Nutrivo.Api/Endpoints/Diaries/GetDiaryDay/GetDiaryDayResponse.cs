@@ -6,7 +6,21 @@ namespace Nutrivo.Api.Endpoints.Diaries.GetDiaryDay;
 
 public sealed record GetDiaryDayResponse(
     DateOnly Date,
-    ImmutableArray<DiaryDayEntryResponse> Entries
+    ImmutableArray<DiaryDayEntryResponse> Entries,
+    DiaryNutritionTotalsResponse Totals,
+    ImmutableArray<DiaryMealTotalsResponse> MealTotals
+);
+
+public sealed record DiaryNutritionTotalsResponse(
+    decimal Kilocalories,
+    decimal ProteinGrams,
+    decimal CarbohydratesGrams,
+    decimal FatGrams
+);
+
+public sealed record DiaryMealTotalsResponse(
+    MealType MealType,
+    DiaryNutritionTotalsResponse Totals
 );
 
 public sealed record DiaryDayEntryResponse(

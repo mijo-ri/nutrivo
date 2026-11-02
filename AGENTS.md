@@ -159,7 +159,7 @@ Do not modify unrelated code or perform broad refactorings without necessity.
 - [x] model diary entries
 - [x] implement `LogFood`
 - [x] implement daily diary query
-- [ ] calculate daily totals
+- [x] calculate daily totals
 - [ ] build first React Native diary screen
 - [ ] edit/delete entries
 - [ ] add nutrition targets

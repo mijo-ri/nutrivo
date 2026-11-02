@@ -15,7 +15,7 @@ public sealed class GetDiaryDayEndpoint : IEndpoint
             .MapGet("/diary-entries", HandleAsync)
             .WithName("GetDiaryDay")
             .WithTags(Tags.Diaries)
-            .WithSummary("Gets the diary entries for a calendar day.")
+            .WithSummary("Gets diary entries and daily and meal nutrition totals.")
             .WithDescription(
                 "An explicit date in yyyy-MM-dd format is required; past and future "
                 + "dates are allowed without time zone conversion. Entries are sorted "
@@ -26,23 +26,46 @@ public sealed class GetDiaryDayEndpoint : IEndpoint
                 + "the consumed amount, rounded to two decimal places with midpoint "
                 + "ties away from zero. Quantities retain their exact values. "
                 + "Direct quantities have null servingCount and servingSize. Empty "
-                + "days return an empty entries array. No daily totals are included."
+                + "days return an empty entries array and zero totals. The totals "
+                + "object includes daily kilocalories, proteinGrams, carbohydratesGrams "
+                + "and fatGrams. The mealTotals array always includes breakfast, lunch, "
+                + "dinner and snacks in that order, with zero totals for empty meals. "
+                + "Totals sum unrounded stored consumption values and are rounded only "
+                + "for display, so displayed daily totals may differ from the sum of "
+                + "displayed entry or meal totals. Totals exceeding the decimal range "
+                + "return 422 Problem Details with code GetDiaryDay.Totals.OutOfRange."
             )
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
     }
 
-    private static async Task<Ok<GetDiaryDayResponse>> HandleAsync(
-        [Description("Required calendar date in yyyy-MM-dd format.")]
-        DateOnly date,
-        IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult> handler,
-        CancellationToken cancellationToken
-    )
+    private static async Task<Results<Ok<GetDiaryDayResponse>, ProblemHttpResult>>
+        HandleAsync(
+            [Description("Required calendar date in yyyy-MM-dd format.")]
+            DateOnly date,
+            IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult> handler,
+            CancellationToken cancellationToken
+        )
     {
         var result = await handler.HandleAsync(
             new GetDiaryDayQuery(date),
             cancellationToken
         );
+
+        if (result.IsFailure)
+        {
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Diary totals out of range.",
+                detail: result.Error!.Description,
+                extensions: new Dictionary<string, object?>
+                {
+                    ["code"] = result.Error.Code
+                }
+            );
+        }
+
         var value = result.Value;
         var entries = value
             .Entries.Select(entry => new DiaryDayEntryResponse(
@@ -71,6 +94,32 @@ public sealed class GetDiaryDayEndpoint : IEndpoint
             )
             .ToImmutableArray();
 
-        return TypedResults.Ok(new GetDiaryDayResponse(value.Date, entries));
+        var mealTotals = value
+            .MealTotals
+            .Select(meal => new DiaryMealTotalsResponse(
+                    meal.MealType,
+                    MapTotals(meal.Totals)
+                )
+            )
+            .ToImmutableArray();
+
+        return TypedResults.Ok(
+            new GetDiaryDayResponse(
+                value.Date,
+                entries,
+                MapTotals(value.Totals),
+                mealTotals
+            )
+        );
+    }
+
+    private static DiaryNutritionTotalsResponse MapTotals(DiaryNutritionTotals totals)
+    {
+        return new DiaryNutritionTotalsResponse(
+            NutritionRounding.ForDisplay(totals.Kilocalories),
+            NutritionRounding.ForDisplay(totals.ProteinGrams),
+            NutritionRounding.ForDisplay(totals.CarbohydratesGrams),
+            NutritionRounding.ForDisplay(totals.FatGrams)
+        );
     }
 }

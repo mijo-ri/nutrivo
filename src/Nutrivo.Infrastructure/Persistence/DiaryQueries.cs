@@ -7,7 +7,7 @@ namespace Nutrivo.Infrastructure.Persistence;
 
 internal sealed class DiaryQueries(NutrivoDbContext context) : IDiaryQueries
 {
-    public async Task<GetDiaryDayResult> GetDayAsync(
+    public async Task<ImmutableArray<DiaryDayEntry>> GetDayAsync(
         DateOnly date,
         CancellationToken cancellationToken
     )
@@ -45,6 +45,6 @@ internal sealed class DiaryQueries(NutrivoDbContext context) : IDiaryQueries
             )
             .ToListAsync(cancellationToken);
 
-        return new GetDiaryDayResult(date, entries.ToImmutableArray());
+        return entries.ToImmutableArray();
     }
 }

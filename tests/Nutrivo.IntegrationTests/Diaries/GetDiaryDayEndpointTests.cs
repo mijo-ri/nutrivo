@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -20,6 +21,7 @@ namespace Nutrivo.IntegrationTests.Diaries;
 public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
 {
     private static readonly DateOnly Day = new(2026, 11, 2);
+    private static readonly DiaryNutritionTotalsResponse ZeroTotals = new(0m, 0m, 0m, 0m);
 
     [Theory]
     [InlineData(ReferenceUnit.Gram, false, null)]
@@ -68,6 +70,16 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
         Assert.Equal(10.01m, entry.ProteinGrams);
         Assert.Equal(1.01m, entry.CarbohydratesGrams);
         Assert.Equal(5.01m, entry.FatGrams);
+        Assert.Equal(
+            new DiaryNutritionTotalsResponse(150.01m, 10.01m, 1.01m, 5.01m),
+            result.Totals
+        );
+        AssertMealOrder(result);
+        Assert.Equal(result.Totals, result.MealTotals[1].Totals);
+        Assert.All(
+            result.MealTotals.Where(meal => meal.MealType != MealType.Lunch),
+            meal => Assert.Equal(ZeroTotals, meal.Totals)
+        );
         if (serving)
         {
             Assert.Equal(0.5m, entry.ServingCount);
@@ -93,7 +105,11 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
         using var response =
             await client.GetAsync($"/diary-entries?date={Day:yyyy-MM-dd}");
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(json.TryGetProperty("totals", out _));
+        Assert.Equal(
+            150.01m,
+            json.GetProperty("totals").GetProperty("kilocalories").GetDecimal()
+        );
+        Assert.Equal(4, json.GetProperty("mealTotals").GetArrayLength());
         var item = Assert.Single(json.GetProperty("entries").EnumerateArray());
         Assert.False(item.TryGetProperty("createdAt", out _));
         if (!serving)
@@ -141,7 +157,15 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
             }.Order(),
             result.Entries.Select(entry => entry.Id).Order()
         );
-        Assert.Empty((await GetAsync(client, date.AddDays(2))).Entries);
+        Assert.Equal(
+            new DiaryNutritionTotalsResponse(300.01m, 20.01m, 2.01m, 10.01m),
+            result.Totals
+        );
+        Assert.Equal(result.Totals, result.MealTotals[0].Totals);
+        var empty = await GetAsync(client, date.AddDays(2));
+        Assert.Empty(empty.Entries);
+        Assert.Equal(ZeroTotals, empty.Totals);
+        Assert.All(empty.MealTotals, meal => Assert.Equal(ZeroTotals, meal.Totals));
     }
 
     [Fact]
@@ -155,6 +179,9 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
 
         Assert.Equal(Day, result.Date);
         Assert.Empty(result.Entries);
+        Assert.Equal(ZeroTotals, result.Totals);
+        AssertMealOrder(result);
+        Assert.All(result.MealTotals, meal => Assert.Equal(ZeroTotals, meal.Totals));
     }
 
     [Fact]
@@ -201,9 +228,22 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
             .Concat([dinner.Id.Value, snack.Id.Value])
             .ToArray();
 
+        var result = await GetAsync(client, Day);
+        Assert.Equal(expected, result.Entries.Select(entry => entry.Id));
+        AssertMealOrder(result);
         Assert.Equal(
-            expected,
-            (await GetAsync(client, Day)).Entries.Select(entry => entry.Id)
+            new DiaryNutritionTotalsResponse(900.03m, 60.03m, 6.03m, 30.03m),
+            result.Totals
+        );
+        Assert.Equal(
+            new[]
+            {
+                new DiaryNutritionTotalsResponse(300.01m, 20.01m, 2.01m, 10.01m),
+                new DiaryNutritionTotalsResponse(300.01m, 20.01m, 2.01m, 10.01m),
+                new DiaryNutritionTotalsResponse(150.01m, 10.01m, 1.01m, 5.01m),
+                new DiaryNutritionTotalsResponse(150.01m, 10.01m, 1.01m, 5.01m)
+            },
+            result.MealTotals.Select(meal => meal.Totals)
         );
         Assert.Equal(
             expected,
@@ -252,19 +292,158 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
             );
         }
 
-        Assert.Equal<DiaryDayEntryResponse>(
-            original.Entries,
-            (await GetAsync(client, Day)).Entries
-        );
+        var changed = await GetAsync(client, Day);
+        Assert.Equal<DiaryDayEntryResponse>(original.Entries, changed.Entries);
+        Assert.Equal(original.Totals, changed.Totals);
+        Assert.Equal<DiaryMealTotalsResponse>(original.MealTotals, changed.MealTotals);
         await using (var context = new NutrivoDbContext(options))
         {
             await context.Foods.ExecuteDeleteAsync();
         }
 
-        Assert.Equal<DiaryDayEntryResponse>(
-            original.Entries,
-            (await GetAsync(client, Day)).Entries
+        var deleted = await GetAsync(client, Day);
+        Assert.Equal<DiaryDayEntryResponse>(original.Entries, deleted.Entries);
+        Assert.Equal(original.Totals, deleted.Totals);
+        Assert.Equal<DiaryMealTotalsResponse>(original.MealTotals, deleted.MealTotals);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Get_SumsExactConsumptionBeforeRoundingEntriesAndMeals(
+        bool differentMeals
+    )
+    {
+        var nutrition = NutritionalValues.Create(0.005m, 0.005m, 0.005m, 0.005m).Value;
+        var solid = Food.Create("Solid", null, 1m, ReferenceUnit.Gram, nutrition).Value;
+        var liquid = Food.Create("Liquid", null, 1m, ReferenceUnit.Milliliter, nutrition)
+            .Value;
+        var options = await CreateDatabaseAsync(solid, liquid);
+        await using (var context = new NutrivoDbContext(options))
+        {
+            context.DiaryEntries.AddRange(
+                DiaryEntry.Create(solid, Day, MealType.Breakfast, 1m, ReferenceUnit.Gram)
+                    .Value,
+                DiaryEntry.Create(
+                        liquid,
+                        Day,
+                        differentMeals ? MealType.Lunch : MealType.Breakfast,
+                        1m,
+                        ReferenceUnit.Milliliter
+                    )
+                    .Value
+            );
+            await context.SaveChangesAsync();
+        }
+
+        await using var factory = new FoodApiFactory(options);
+        using var client = CreateClient(factory);
+
+        var result = await GetAsync(client, Day);
+
+        var rounded = new DiaryNutritionTotalsResponse(0.01m, 0.01m, 0.01m, 0.01m);
+        Assert.Equal(rounded, result.Totals);
+        Assert.Equal(2, result.Entries.Length);
+        Assert.All(
+            result.Entries,
+            entry =>
+            {
+                Assert.Equal(0.01m, entry.Kilocalories);
+                Assert.Equal(0.01m, entry.ProteinGrams);
+                Assert.Equal(0.01m, entry.CarbohydratesGrams);
+                Assert.Equal(0.01m, entry.FatGrams);
+            }
         );
+        AssertMealOrder(result);
+        Assert.Equal(rounded, result.MealTotals[0].Totals);
+        Assert.Equal(differentMeals ? rounded : ZeroTotals, result.MealTotals[1].Totals);
+        Assert.Equal(ZeroTotals, result.MealTotals[2].Totals);
+        Assert.Equal(ZeroTotals, result.MealTotals[3].Totals);
+        await using var verification = new NutrivoDbContext(options);
+        Assert.All(
+            await verification.DiaryEntries.ToListAsync(),
+            entry =>
+            {
+                Assert.Equal(nutrition, entry.NutritionalValues);
+            }
+        );
+    }
+
+    [Theory]
+    [InlineData("Development", 0)]
+    [InlineData("Development", 1)]
+    [InlineData("Development", 2)]
+    [InlineData("Development", 3)]
+    [InlineData("Production", 0)]
+    [InlineData("Production", 1)]
+    [InlineData("Production", 2)]
+    [InlineData("Production", 3)]
+    public async Task Get_WhenDayTotalOverflows_Returns422WithoutChangingEntries(
+        string environment,
+        int nutrient
+    )
+    {
+        decimal[] values = [0m, 0m, 0m, 0m];
+        values[nutrient] = decimal.MaxValue;
+        var nutrition = NutritionalValues.Create(
+                values[0],
+                values[1],
+                values[2],
+                values[3]
+            )
+            .Value;
+        var food = Food.Create("Large", null, 1m, ReferenceUnit.Gram, nutrition).Value;
+        var options = await CreateDatabaseAsync(food);
+        var breakfast = DiaryEntry.Create(
+                food,
+                Day,
+                MealType.Breakfast,
+                1m,
+                ReferenceUnit.Gram
+            )
+            .Value;
+        var lunch = DiaryEntry.Create(
+                food,
+                Day,
+                MealType.Lunch,
+                1m,
+                ReferenceUnit.Gram
+            )
+            .Value;
+        await using (var context = new NutrivoDbContext(options))
+        {
+            context.DiaryEntries.AddRange(breakfast, lunch);
+            await context.SaveChangesAsync();
+        }
+
+        await using var factory = new FoodApiFactory(options, environment);
+        using var client = CreateClient(factory);
+
+        using var response =
+            await client.GetAsync($"/diary-entries?date={Day:yyyy-MM-dd}");
+
+        var problem = await AssertProblemAsync(
+            response,
+            HttpStatusCode.UnprocessableEntity
+        );
+        Assert.Equal(
+            "GetDiaryDay.Totals.OutOfRange",
+            problem.GetProperty("code").GetString()
+        );
+        Assert.False(problem.TryGetProperty("entries", out _));
+        Assert.False(problem.TryGetProperty("totals", out _));
+        Assert.False(problem.TryGetProperty("mealTotals", out _));
+        Assert.DoesNotContain("OverflowException", problem.GetRawText());
+        await using var verification = new NutrivoDbContext(options);
+        var stored = await verification.DiaryEntries.ToListAsync();
+        Assert.Equal(
+            new[]
+            {
+                breakfast.Id.Value, lunch.Id.Value
+            }.Order(),
+            stored.Select(entry => entry.Id.Value).Order()
+        );
+        Assert.All(stored, entry => Assert.Equal(nutrition, entry.NutritionalValues));
     }
 
     [Theory]
@@ -340,7 +519,7 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
         );
         foreach (var status in new[]
                  {
-                     "200", "400", "500"
+                     "200", "400", "422", "500"
                  })
         {
             Assert.True(operation.GetProperty("responses").TryGetProperty(status, out _));
@@ -351,7 +530,24 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
             schemas.GetProperty("GetDiaryDayResponse").GetProperty("properties");
         Assert.True(response.TryGetProperty("date", out _));
         Assert.True(response.TryGetProperty("entries", out _));
-        Assert.False(response.TryGetProperty("totals", out _));
+        Assert.True(response.TryGetProperty("totals", out _));
+        Assert.True(response.TryGetProperty("mealTotals", out _));
+        var totals = schemas
+            .GetProperty("DiaryNutritionTotalsResponse")
+            .GetProperty("properties");
+        foreach (var field in new[]
+                 {
+                     "kilocalories", "proteinGrams", "carbohydratesGrams", "fatGrams"
+                 })
+        {
+            Assert.True(totals.TryGetProperty(field, out _));
+        }
+
+        var mealTotals = schemas
+            .GetProperty("DiaryMealTotalsResponse")
+            .GetProperty("properties");
+        Assert.True(mealTotals.TryGetProperty("mealType", out _));
+        Assert.True(mealTotals.TryGetProperty("totals", out _));
         var entry =
             schemas.GetProperty("DiaryDayEntryResponse").GetProperty("properties");
         foreach (var field in new[]
@@ -383,12 +579,23 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
 
         var result = await query.GetDayAsync(Day, CancellationToken.None);
 
-        Assert.Equal(150.005m, Assert.Single(result.Entries).Kilocalories);
+        Assert.Equal(150.005m, Assert.Single(result).Kilocalories);
         Assert.Empty(db.ChangeTracker.Entries());
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             query.GetDayAsync(Day, cancellation.Token)
+        );
+    }
+
+    private static void AssertMealOrder(GetDiaryDayResponse result)
+    {
+        Assert.Equal(
+            new[]
+            {
+                MealType.Breakfast, MealType.Lunch, MealType.Dinner, MealType.Snacks
+            },
+            result.MealTotals.Select(meal => meal.MealType)
         );
     }
 
@@ -469,7 +676,7 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
 
     private sealed class FailingDiaryQueries : IDiaryQueries
     {
-        public Task<GetDiaryDayResult> GetDayAsync(
+        public Task<ImmutableArray<DiaryDayEntry>> GetDayAsync(
             DateOnly date,
             CancellationToken cancellationToken
         )

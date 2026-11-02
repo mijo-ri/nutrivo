@@ -3,7 +3,8 @@
 A calorie and nutrition tracking app built with .NET 10, DDD and Clean Architecture.
 The current backend supports food creation (`POST /foods`), paginated food search
 (`GET /foods`), diary logging (`POST /diary-entries`) and daily diary reads
-(`GET /diary-entries?date=yyyy-MM-dd`), backed by PostgreSQL.
+(`GET /diary-entries?date=yyyy-MM-dd`) with daily and meal nutrition totals,
+backed by PostgreSQL.
 
 ## Local development
 
@@ -227,14 +228,68 @@ Past and future days are supported. The response is `200 OK`, for example:
       "servingCount": null,
       "servingSize": null
     }
+  ],
+  "totals": {
+    "kilocalories": 279,
+    "proteinGrams": 10.13,
+    "carbohydratesGrams": 44.03,
+    "fatGrams": 5.25
+  },
+  "mealTotals": [
+    {
+      "mealType": 1,
+      "totals": {
+        "kilocalories": 279,
+        "proteinGrams": 10.13,
+        "carbohydratesGrams": 44.03,
+        "fatGrams": 5.25
+      }
+    },
+    {
+      "mealType": 2,
+      "totals": {
+        "kilocalories": 0,
+        "proteinGrams": 0,
+        "carbohydratesGrams": 0,
+        "fatGrams": 0
+      }
+    },
+    {
+      "mealType": 3,
+      "totals": {
+        "kilocalories": 0,
+        "proteinGrams": 0,
+        "carbohydratesGrams": 0,
+        "fatGrams": 0
+      }
+    },
+    {
+      "mealType": 4,
+      "totals": {
+        "kilocalories": 0,
+        "proteinGrams": 0,
+        "carbohydratesGrams": 0,
+        "fatGrams": 0
+      }
+    }
   ]
 }
 ```
 
 The flat list is sorted by meal (breakfast `1`, lunch `2`, dinner `3`, snacks `4`),
 then by capture time oldest first, then by entry ID for ties. Repeated bookings
-remain separate entries. There is no pagination or daily total yet. Days without
-entries return the requested `date` and `entries: []`.
+remain separate entries and each contributes to the totals. There is no pagination.
+The `totals` object contains daily kilocalories, protein, carbohydrates and fat;
+`mealTotals` always contains all four meals in the order above, each with its own
+`totals` object. Meals without entries have zero totals. Days without entries return
+the requested `date`, `entries: []`, zero daily totals and four zero meal totals.
+
+Totals use the exact stored consumed nutrients from the same read as the entries,
+without catalogue lookups or recalculating food quantities. Daily and meal values
+are summed before display rounding. For example, two entries of 0.005 kcal each
+display as 0.01 kcal each but have a total of 0.01 kcal. If they belong to different
+meals, each meal displays 0.01 kcal while the day still displays 0.01 kcal. Thus
+displayed daily totals may differ from the sum of displayed entries or meal totals.
 
 Names, brands and serving details come from historical snapshots, so catalogue
 changes or deletion do not alter the diary. Nutrition refers to the consumed
@@ -248,6 +303,9 @@ serving fields. `foodId` and serving IDs identify the originally logged catalogu
 items, which may no longer exist.
 
 Missing or invalid dates return `400 Problem Details` through request binding.
+If any daily or meal nutrient total exceeds the supported decimal range, the whole
+request returns `422 Problem Details` with code `GetDiaryDay.Totals.OutOfRange`,
+without partial results or changes to stored entries.
 Technical failures return a generic `500 Problem Details`. The query requires no
 authentication and does not modify entries.
 
@@ -361,8 +419,11 @@ created through POST, read-only projections, Problem Details and OpenAPI default
 Daily diary tests cover exact date selection, duplicate bookings, all meal groups,
 capture-time ordering with ID ties, direct and serving inputs, historical snapshots
 after catalogue changes/deletion, output rounding, cancellation and read-only
-projections. Migration tests cover legacy timestamp backfill, generated timestamps,
-rollback and reapplication without changing diary content.
+projections. Totals tests cover daily and meal aggregation, empty meals and days,
+mixed reference units, rounding only after summation, maximum representable totals
+and nutrient overflow with a stable 422 error. Migration tests cover legacy
+timestamp backfill, generated timestamps, rollback and reapplication without
+changing diary content.
 
 ## Architecture decisions
 
@@ -371,3 +432,4 @@ rollback and reapplication without changing diary content.
 - [CreateFood command and HTTP endpoint](docs/adr/0003-create-food.md)
 - [Food search and read access](docs/adr/0004-food-search.md)
 - [Daily diary read access and capture order](docs/adr/0008-daily-diary-query.md)
+- [Daily and meal nutrition totals](docs/adr/0009-diary-nutrition-totals.md)

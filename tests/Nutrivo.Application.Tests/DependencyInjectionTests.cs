@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Diaries;
@@ -301,7 +302,7 @@ public sealed class DependencyInjectionTests
 
     public sealed class UnusedDiaryQueries : IDiaryQueries
     {
-        public Task<GetDiaryDayResult> GetDayAsync(
+        public Task<ImmutableArray<DiaryDayEntry>> GetDayAsync(
             DateOnly date,
             CancellationToken cancellationToken
         )

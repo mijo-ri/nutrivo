@@ -6,8 +6,19 @@ namespace Nutrivo.Application.Diaries.GetDiaryDay;
 
 public sealed record GetDiaryDayResult(
     DateOnly Date,
-    ImmutableArray<DiaryDayEntry> Entries
+    ImmutableArray<DiaryDayEntry> Entries,
+    DiaryNutritionTotals Totals,
+    ImmutableArray<DiaryMealTotals> MealTotals
 );
+
+public sealed record DiaryNutritionTotals(
+    decimal Kilocalories,
+    decimal ProteinGrams,
+    decimal CarbohydratesGrams,
+    decimal FatGrams
+);
+
+public sealed record DiaryMealTotals(MealType MealType, DiaryNutritionTotals Totals);
 
 public sealed record DiaryDayEntry(
     Guid Id,
