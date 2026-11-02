@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Api.Endpoints;
+using Nutrivo.Api.Endpoints.Diaries.GetDiaryDay;
 using Nutrivo.Api.Endpoints.Diaries.LogFood;
 using Nutrivo.Api.Endpoints.Foods.CreateFood;
 using Nutrivo.Api.Endpoints.Foods.SearchFoods;
@@ -24,12 +25,17 @@ public sealed class EndpointRegistrationTests
         services.AddEndpoints();
 
         using var provider = services.BuildServiceProvider(
-            new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
+            new ServiceProviderOptions
+            {
+                ValidateScopes = true,
+                ValidateOnBuild = true
+            }
         );
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.Equal(3, endpoints.Length);
+        Assert.Equal(4, endpoints.Length);
+        Assert.Single(endpoints.OfType<GetDiaryDayEndpoint>());
         Assert.Single(endpoints.OfType<LogFoodEndpoint>());
         Assert.Single(endpoints.OfType<CreateFoodEndpoint>());
         Assert.Single(endpoints.OfType<SearchFoodsEndpoint>());

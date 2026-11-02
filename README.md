@@ -1,9 +1,9 @@
 # Nutrivo
 
 A calorie and nutrition tracking app built with .NET 10, DDD and Clean Architecture.
-The current backend includes the Food domain, PostgreSQL persistence and a
-CreateFood command exposed through `POST /foods` and a paginated Food search at
-`GET /foods`.
+The current backend supports food creation (`POST /foods`), paginated food search
+(`GET /foods`), diary logging (`POST /diary-entries`) and daily diary reads
+(`GET /diary-entries?date=yyyy-MM-dd`), backed by PostgreSQL.
 
 ## Local development
 
@@ -195,6 +195,69 @@ Malformed numeric parameters also return `400 Problem Details` through request
 binding. Technical storage failures return a generic `500` without internal
 details. Search requires no authentication and does not change stored foods.
 
+### 7. Read a diary day
+
+After logging food through `POST /diary-entries`, retrieve a selected calendar day:
+
+```sh
+curl --fail-with-body --get http://localhost:5097/diary-entries \
+  --data-urlencode 'date=2026-11-02'
+```
+
+`date` is required and documented as `yyyy-MM-dd`. It selects the exact stored
+calendar date without time zone conversion or a server-side "today" default.
+Past and future days are supported. The response is `200 OK`, for example:
+
+```json
+{
+  "date": "2026-11-02",
+  "entries": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "mealType": 1,
+      "foodId": "22222222-2222-2222-2222-222222222222",
+      "name": "Rolled oats",
+      "brand": "Example",
+      "quantity": 75,
+      "referenceUnit": 1,
+      "kilocalories": 279,
+      "proteinGrams": 10.13,
+      "carbohydratesGrams": 44.03,
+      "fatGrams": 5.25,
+      "servingCount": null,
+      "servingSize": null
+    }
+  ]
+}
+```
+
+The flat list is sorted by meal (breakfast `1`, lunch `2`, dinner `3`, snacks `4`),
+then by capture time oldest first, then by entry ID for ties. Repeated bookings
+remain separate entries. There is no pagination or daily total yet. Days without
+entries return the requested `date` and `entries: []`.
+
+Names, brands and serving details come from historical snapshots, so catalogue
+changes or deletion do not alter the diary. Nutrition refers to the consumed
+quantity, rounded only for the HTTP response to two decimal places with midpoint
+ties away from zero. Quantities and stored nutrients retain their exact values.
+`referenceUnit` is grams (`1`) or milliliters (`2`). A serving booking also returns
+`servingCount` and a `servingSize` object with `id`, `quantity`, `unit`, optional
+`label` and `equivalentQuantity`; the last field describes the entire defined
+serving in the entry's reference unit. Direct bookings return null for both
+serving fields. `foodId` and serving IDs identify the originally logged catalogue
+items, which may no longer exist.
+
+Missing or invalid dates return `400 Problem Details` through request binding.
+Technical failures return a generic `500 Problem Details`. The query requires no
+authentication and does not modify entries.
+
+Apply the `DiaryEntryCaptureTime` migration with the migration command above before
+using the updated backend. PostgreSQL generates `created_at` on INSERT; this is
+internal metadata and is not returned by the API. All existing entries receive
+the migration timestamp, so their original capture order cannot be reconstructed;
+within a meal they are ordered by ID. Rollback removes only this metadata and
+preserves diary content, but discards the recorded capture order.
+
 ### Stop PostgreSQL
 
 ```sh
@@ -295,9 +358,16 @@ and technical failures. PostgreSQL/API tests exercise literal name/brand matchin
 special characters, deterministic pagination, exact nutrition responses, foods
 created through POST, read-only projections, Problem Details and OpenAPI defaults.
 
+Daily diary tests cover exact date selection, duplicate bookings, all meal groups,
+capture-time ordering with ID ties, direct and serving inputs, historical snapshots
+after catalogue changes/deletion, output rounding, cancellation and read-only
+projections. Migration tests cover legacy timestamp backfill, generated timestamps,
+rollback and reapplication without changing diary content.
+
 ## Architecture decisions
 
 - [Food aggregate and reference basis](docs/adr/0001-food-aggregate.md)
 - [PostgreSQL and Food persistence](docs/adr/0002-postgresql-food-persistence.md)
 - [CreateFood command and HTTP endpoint](docs/adr/0003-create-food.md)
 - [Food search and read access](docs/adr/0004-food-search.md)
+- [Daily diary read access and capture order](docs/adr/0008-daily-diary-query.md)

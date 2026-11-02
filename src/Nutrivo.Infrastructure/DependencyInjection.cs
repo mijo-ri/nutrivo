@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IFoodRepository, FoodRepository>();
         services.AddScoped<IDiaryEntryRepository, DiaryEntryRepository>();
         services.AddScoped<IFoodQueries, FoodQueries>();
+        services.AddScoped<IDiaryQueries, DiaryQueries>();
 
         return services;
     }

@@ -18,6 +18,11 @@ internal sealed class DiaryEntryConfiguration : IEntityTypeConfiguration<DiaryEn
             .ValueGeneratedNever();
         builder.Property(entry => entry.Date).HasColumnName("date");
         builder
+            .Property<DateTimeOffset>("CreatedAt")
+            .HasColumnName("created_at")
+            .HasColumnType("timestamp with time zone")
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        builder
             .Property(entry => entry.MealType)
             .HasColumnName("meal_type")
             .HasConversion<int>();

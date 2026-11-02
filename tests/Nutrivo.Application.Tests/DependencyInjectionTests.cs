@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Diaries;
+using Nutrivo.Application.Diaries.GetDiaryDay;
 using Nutrivo.Application.Diaries.LogFood;
 using Nutrivo.Domain.Diaries;
 using Nutrivo.Application.Foods;
@@ -20,12 +21,17 @@ public sealed class DependencyInjectionTests
         services.AddScoped<IFoodRepository, UnusedFoodRepository>();
         services.AddScoped<IDiaryEntryRepository, UnusedDiaryEntryRepository>();
         services.AddScoped<IFoodQueries, UnusedFoodQueries>();
+        services.AddScoped<IDiaryQueries, UnusedDiaryQueries>();
 
         Assert.Same(services, services.AddApplication());
         services.AddApplication();
 
         using var provider = services.BuildServiceProvider(
-            new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
+            new ServiceProviderOptions
+            {
+                ValidateScopes = true,
+                ValidateOnBuild = true
+            }
         );
         using var firstScope = provider.CreateScope();
         using var secondScope = provider.CreateScope();
@@ -57,6 +63,24 @@ public sealed class DependencyInjectionTests
         );
 
         Assert.IsType<CreateFoodCommandHandler>(first);
+        var diary = firstScope.ServiceProvider
+            .GetRequiredService<IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult>>();
+        Assert.IsType<GetDiaryDayQueryHandler>(diary);
+        Assert.Same(
+            diary,
+            firstScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult>>()
+        );
+        Assert.NotSame(
+            diary,
+            secondScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult>>()
+        );
+        Assert.Single(
+            services,
+            descriptor => descriptor.ServiceType
+                == typeof(IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult>)
+        );
         Assert.Same(first, same);
         Assert.NotSame(first, second);
         var query = firstScope.ServiceProvider
@@ -91,8 +115,9 @@ public sealed class DependencyInjectionTests
                 || descriptor.ImplementationType == typeof(CommandProcessor)
                 || descriptor.ImplementationType == typeof(QueryProcessor)
         );
-        Assert.Throws<InvalidOperationException>(provider
-            .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>
+        Assert.Throws<InvalidOperationException>(
+            provider
+                .GetRequiredService<ICommandHandler<CreateFoodCommand, FoodId>>
         );
     }
 
@@ -105,7 +130,11 @@ public sealed class DependencyInjectionTests
             [typeof(CommandProcessor), typeof(QueryProcessor)]
         );
         await using var provider = services.BuildServiceProvider(
-            new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }
+            new ServiceProviderOptions
+            {
+                ValidateScopes = true,
+                ValidateOnBuild = true
+            }
         );
         using var firstScope = provider.CreateScope();
         using var secondScope = provider.CreateScope();
@@ -263,6 +292,17 @@ public sealed class DependencyInjectionTests
             string? search,
             int page,
             int pageSize,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    public sealed class UnusedDiaryQueries : IDiaryQueries
+    {
+        public Task<GetDiaryDayResult> GetDayAsync(
+            DateOnly date,
             CancellationToken cancellationToken
         )
         {

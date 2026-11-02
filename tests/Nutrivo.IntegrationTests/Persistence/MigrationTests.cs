@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Nutrivo.Infrastructure.Persistence;
 using Nutrivo.Domain.Foods;
+using Nutrivo.Domain.Diaries;
 using Npgsql;
 
 namespace Nutrivo.IntegrationTests.Persistence;
@@ -10,6 +11,132 @@ namespace Nutrivo.IntegrationTests.Persistence;
 [Collection("PostgreSQL")]
 public sealed class MigrationTests(PostgreSqlFixture fixture)
 {
+    [Fact]
+    public async Task
+        DiaryEntryCaptureTime_BackfillsLegacyEntriesAndPreservesDataOnRollback()
+    {
+        var options = await fixture.CreateDatabaseAsync();
+        await using var context = new NutrivoDbContext(options);
+        await context.Database.MigrateAsync();
+        var food = Food.Create(
+                "Legacy",
+                "Brand",
+                100m,
+                ReferenceUnit.Gram,
+                NutritionalValues.Create(150.005m, 10.005m, 1.005m, 5.005m).Value,
+                [ServingSize.Create(2m, "pieces", "Medium", 116m).Value]
+            )
+            .Value;
+        var date = new DateOnly(2020, 2, 29);
+        var direct = DiaryEntry.Create(
+                food,
+                date,
+                MealType.Breakfast,
+                25.123m,
+                ReferenceUnit.Gram
+            )
+            .Value;
+        var serving = DiaryEntry.CreateFromServing(
+                food,
+                date,
+                MealType.Lunch,
+                food.ServingSizes.Single().Id,
+                0.5m
+            )
+            .Value;
+        context.Foods.Add(food);
+        context.DiaryEntries.AddRange(direct, serving);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+        var migrator = context.GetService<IMigrator>();
+        var legacyMigration = context
+            .Database.GetMigrations()
+            .Single(migration => migration.EndsWith("_DiaryEntries"));
+        await migrator.MigrateAsync(legacyMigration);
+        var before = await DatabaseTimeAsync();
+
+        await context.Database.MigrateAsync();
+
+        var after = await DatabaseTimeAsync();
+        var timestamps = await context
+            .DiaryEntries.AsNoTracking()
+            .Select(entry => EF.Property<DateTimeOffset>(entry, "CreatedAt"))
+            .ToArrayAsync();
+        Assert.Equal(2, timestamps.Length);
+        Assert.Equal(timestamps[0], timestamps[1]);
+        Assert.All(timestamps, time => Assert.InRange(time, before, after));
+        await AssertEntriesUnchangedAsync(direct, serving);
+
+        var added = DiaryEntry.Create(
+                food,
+                date,
+                MealType.Snacks,
+                50m,
+                ReferenceUnit.Gram
+            )
+            .Value;
+        var beforeInsert = await DatabaseTimeAsync();
+        context.DiaryEntries.Add(added);
+        await context.SaveChangesAsync();
+        var afterInsert = await DatabaseTimeAsync();
+        var generated =
+            context.Entry(added).Property<DateTimeOffset>("CreatedAt").CurrentValue;
+        Assert.InRange(generated, beforeInsert, afterInsert);
+        context.ChangeTracker.Clear();
+
+        await migrator.MigrateAsync(legacyMigration);
+
+        Assert.Equal(
+            3L,
+            await context
+                .Database.SqlQuery<long>(
+                    $"SELECT count(*) AS \"Value\" FROM public.diary_entries"
+                )
+                .SingleAsync()
+        );
+        Assert.False(
+            await context
+                .Database.SqlQuery<bool>(
+                    $"""
+                    SELECT EXISTS (SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'public' AND table_name = 'diary_entries'
+                        AND column_name = 'created_at') AS "Value"
+                    """
+                )
+                .SingleAsync()
+        );
+        await context.Database.MigrateAsync();
+        await AssertEntriesUnchangedAsync(direct, serving, added);
+        Assert.False(context.Database.HasPendingModelChanges());
+
+        async Task<DateTimeOffset> DatabaseTimeAsync()
+        {
+            return await context
+                .Database.SqlQuery<DateTimeOffset>(
+                    $"SELECT CURRENT_TIMESTAMP AS \"Value\""
+                )
+                .SingleAsync();
+        }
+
+        async Task AssertEntriesUnchangedAsync(params DiaryEntry[] expected)
+        {
+            var stored = await context.DiaryEntries.AsNoTracking().ToArrayAsync();
+            Assert.Equal(expected.Length, stored.Length);
+            foreach (var original in expected)
+            {
+                var entry = Assert.Single(stored, entry => entry.Id == original.Id);
+                Assert.Equal(original.Date, entry.Date);
+                Assert.Equal(original.MealType, entry.MealType);
+                Assert.Equal(original.Quantity, entry.Quantity);
+                Assert.Equal(original.ReferenceUnit, entry.ReferenceUnit);
+                Assert.Equal(original.FoodSnapshot, entry.FoodSnapshot);
+                Assert.Equal(original.NutritionalValues, entry.NutritionalValues);
+                Assert.Equal(original.ServingCount, entry.ServingCount);
+                Assert.Equal(original.ServingSizeSnapshot, entry.ServingSizeSnapshot);
+            }
+        }
+    }
+
     [Fact]
     public async Task Migrations_CanApplyReapplyRollbackAndRebuild()
     {
@@ -22,8 +149,8 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
         await context.Database.MigrateAsync();
 
         var applied = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.Equal(3, applied.Length);
-        Assert.EndsWith("_DiaryEntries", applied[^1]);
+        Assert.Equal(4, applied.Length);
+        Assert.EndsWith("_DiaryEntryCaptureTime", applied[^1]);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.Equal(0, await context.Foods.CountAsync());
         Assert.Equal(0, await context.DiaryEntries.CountAsync());
@@ -36,7 +163,7 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
         await migrator.MigrateAsync(Migration.InitialDatabase);
 
         Assert.Empty(await context.Database.GetAppliedMigrationsAsync());
-        Assert.Equal(3, (await context.Database.GetPendingMigrationsAsync()).Count());
+        Assert.Equal(4, (await context.Database.GetPendingMigrationsAsync()).Count());
         Assert.True(
             await context
                 .Database.SqlQuery<bool>(

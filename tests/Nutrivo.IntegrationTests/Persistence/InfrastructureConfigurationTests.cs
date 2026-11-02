@@ -47,7 +47,12 @@ public sealed class InfrastructureConfigurationTests
             .Build();
         using var services = new ServiceCollection()
             .AddInfrastructure(configuration)
-            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+            .BuildServiceProvider(
+                new ServiceProviderOptions
+                {
+                    ValidateScopes = true
+                }
+            );
         using var firstScope = services.CreateScope();
         using var secondScope = services.CreateScope();
 
@@ -59,6 +64,15 @@ public sealed class InfrastructureConfigurationTests
         Assert.NotSame(first, second);
         var entries =
             firstScope.ServiceProvider.GetRequiredService<IDiaryEntryRepository>();
+        var diary = firstScope.ServiceProvider.GetRequiredService<IDiaryQueries>();
+        Assert.Same(
+            diary,
+            firstScope.ServiceProvider.GetRequiredService<IDiaryQueries>()
+        );
+        Assert.NotSame(
+            diary,
+            secondScope.ServiceProvider.GetRequiredService<IDiaryQueries>()
+        );
         Assert.Same(
             entries,
             firstScope.ServiceProvider.GetRequiredService<IDiaryEntryRepository>()
