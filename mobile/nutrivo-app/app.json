@@ -1,0 +1,25 @@
+{
+    "expo": {
+        "name": "Nutrivo",
+        "slug": "nutrivo-app",
+        "version": "0.1.0",
+        "scheme": "nutrivo",
+        "userInterfaceStyle": "dark",
+        "backgroundColor": "#131317",
+        "web": {
+            "output": "static"
+        },
+        "plugins": [
+            "expo-router",
+            [
+                "expo-splash-screen",
+                {
+                    "backgroundColor": "#131317"
+                }
+            ]
+        ],
+        "experiments": {
+            "typedRoutes": true
+        }
+    }
+}

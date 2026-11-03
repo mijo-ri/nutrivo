@@ -6,6 +6,20 @@ The current backend supports food creation (`POST /foods`), paginated food searc
 (`GET /diary-entries?date=yyyy-MM-dd`) with daily and meal nutrition totals,
 backed by PostgreSQL.
 
+## Mobile app
+
+The Expo/React Native app lives in [`mobile/nutrivo-app`](mobile/nutrivo-app).
+It currently provides the navigation shell, a dark theme based on the Stitch
+export and a diary introduction screen. It can run independently of the API.
+See the [mobile setup and validation guide](mobile/nutrivo-app/README.md) for
+Expo Go instructions, scripts and the device checklist.
+
+```sh
+cd mobile/nutrivo-app
+npm ci
+npm start
+```
+
 ## Local development
 
 Prerequisites: .NET 10 SDK and Docker with Docker Compose. Run the following
