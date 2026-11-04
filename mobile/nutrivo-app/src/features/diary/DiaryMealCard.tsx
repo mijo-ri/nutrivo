@@ -29,13 +29,7 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                         {formatNutrition(calories)} kcal
                     </AppText>
                 </View>
-                {empty ? (
-                    <AppText variant="labelCaps" tone="secondary">
-                        Leer
-                    </AppText>
-                ) : (
-                    <AddEntryButton mealName={meal.name} compact={compactAction} />
-                )}
+                <AddEntryButton mealName={meal.name} compact={compactAction} />
             </View>
             {empty ? (
                 <View style={styles.empty}>
@@ -60,7 +54,6 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                             Zwischenmahlzeiten oder Shakes hier erfassen
                         </AppText>
                     </View>
-                    <AddEntryButton mealName={meal.name} />
                 </View>
             ) : meal.entries.map((entry, index) => (
                 <View
@@ -98,17 +91,18 @@ function AddEntryButton({
             accessibilityLabel={`Eintrag zu ${mealName} hinzufügen`}
             accessibilityHint="In der Designansicht noch nicht verfügbar"
             accessibilityState={{ disabled: true }}
+            hitSlop={theme.spacing.sm}
             style={styles.addButton}
         >
             <MaterialDesignIcons
                 name="plus"
-                size={20}
-                color={theme.colors.primary}
+                size={16}
+                color={theme.colors.onPrimary}
                 accessible={false}
                 aria-hidden
             />
             {!compact && (
-                <AppText variant="labelCaps" tone="accent">
+                <AppText variant="labelCaps" style={styles.addButtonText}>
                     Hinzufügen
                 </AppText>
             )}
@@ -125,6 +119,7 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         flexWrap: 'wrap',
+        alignContent: 'center',
         alignItems: 'center',
         justifyContent: 'space-between',
         columnGap: theme.spacing.sm,
@@ -137,20 +132,27 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         flexWrap: 'wrap',
-        alignItems: 'baseline',
+        alignItems: 'center',
         columnGap: theme.spacing.sm,
         minWidth: 0,
     },
     addButton: {
-        minWidth: 44,
-        minHeight: 44,
+        minWidth: 28,
+        minHeight: 28,
         flexDirection: 'row',
         flexWrap: 'wrap',
+        alignContent: 'center',
         alignItems: 'center',
         justifyContent: 'center',
         gap: theme.spacing.xs,
         paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.radii.full,
+        backgroundColor: theme.colors.primary,
         opacity: 0.45,
+    },
+    addButtonText: {
+        color: theme.colors.onPrimary,
     },
     entry: {
         minHeight: 52,
