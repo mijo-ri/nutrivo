@@ -51,28 +51,36 @@ export function DiarySummary({ total, targets }: DiarySummaryProps) {
     const { width, fontScale } = useWindowDimensions();
     const stacked = width < 360 || fontScale > 1.2;
     const remaining = targets.calories - total.calories;
+    const remainingLabel = remaining >= 0 ? 'verbleibend' : 'über Ziel';
 
     return (
         <Card style={styles.card}>
             <View style={[styles.metrics, fontScale > 1.2 && styles.stacked]}>
-                <CalorieMetric
-                    label="Gegessen"
-                    value={total.calories}
-                    stacked={fontScale > 1.2}
-                />
-                <CalorieMetric
-                    label="Ziel"
-                    value={targets.calories}
-                    align="center"
-                    stacked={fontScale > 1.2}
-                />
-                <CalorieMetric
-                    label={remaining >= 0 ? 'Verbleibend' : 'Über Ziel'}
-                    value={Math.abs(remaining)}
-                    align="flex-end"
-                    prominent
-                    stacked={fontScale > 1.2}
-                />
+                <View
+                    accessible
+                    accessibilityLabel={`Gegessen: ${formatNutrition(total.calories)} Kilokalorien. Ziel: ${formatNutrition(targets.calories)} Kilokalorien`}
+                    style={styles.calories}
+                >
+                    <AppText variant="labelCaps" tone="secondary">KCAL</AppText>
+                    <AppText variant="numericMd">
+                        {formatNutrition(total.calories)}
+                        <AppText variant="numericMd" tone="secondary">
+                            {' / '}{formatNutrition(targets.calories)}
+                        </AppText>
+                    </AppText>
+                </View>
+                <AppText
+                    accessible
+                    accessibilityLabel={`${formatNutrition(Math.abs(remaining))} Kilokalorien ${remainingLabel}`}
+                    variant="numericMd"
+                    tone="accent"
+                    style={styles.remaining}
+                >
+                    {formatNutrition(Math.abs(remaining))}
+                    <AppText variant="bodySm" tone="secondary">
+                        {' '}{remainingLabel}
+                    </AppText>
+                </AppText>
             </View>
             <View
                 accessible
@@ -115,67 +123,27 @@ export function DiarySummary({ total, targets }: DiarySummaryProps) {
     );
 }
 
-function CalorieMetric({
-    label,
-    value,
-    align = 'flex-start',
-    prominent = false,
-    stacked = false,
-}: {
-    label: string;
-    value: number;
-    align?: 'flex-start' | 'center' | 'flex-end';
-    prominent?: boolean;
-    stacked?: boolean;
-}) {
-    return (
-        <View
-            accessible
-            accessibilityLabel={`${label}: ${formatNutrition(value)} Kilokalorien`}
-            style={[
-                styles.metric,
-                { alignItems: align },
-                stacked && styles.naturalHeight,
-            ]}
-        >
-            <AppText variant="labelCaps" tone={prominent ? 'accent' : 'secondary'}>
-                {label}
-            </AppText>
-            <View style={[styles.value, { justifyContent: align }]}>
-                <AppText
-                    variant={prominent ? 'numericLg' : 'numericMd'}
-                    tone={prominent ? 'accent' : 'default'}
-                >
-                    {formatNutrition(value)}
-                </AppText>
-                <AppText variant="bodySm" tone={prominent ? 'accent' : 'secondary'}>
-                    kcal
-                </AppText>
-            </View>
-        </View>
-    );
-}
-
 const styles = StyleSheet.create({
     card: {
         padding: theme.spacing.md,
-        gap: theme.spacing.md,
+        gap: theme.spacing.sm,
     },
     metrics: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         alignItems: 'flex-end',
-        gap: theme.spacing.xs,
+        justifyContent: 'space-between',
+        gap: theme.spacing.md,
     },
-    metric: {
-        flex: 1,
+    calories: {
+        flexShrink: 1,
         minWidth: 0,
         gap: theme.spacing.xs,
     },
-    value: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'baseline',
-        columnGap: theme.spacing.xs,
+    remaining: {
+        flexShrink: 1,
+        alignSelf: 'flex-end',
+        textAlign: 'right',
     },
     track: {
         height: 6,
@@ -189,10 +157,8 @@ const styles = StyleSheet.create({
     },
     macros: {
         flexDirection: 'row',
-        gap: theme.spacing.md,
-        padding: theme.spacing.sm,
-        borderRadius: theme.radii.md,
-        backgroundColor: theme.colors.surfaceLow,
+        gap: theme.spacing.xl,
+        marginTop: theme.spacing.md,
     },
     macro: {
         flex: 1,
