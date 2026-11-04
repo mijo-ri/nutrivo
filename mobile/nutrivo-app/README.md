@@ -1,8 +1,9 @@
 # Nutrivo mobile
 
-React Native with TypeScript, Expo SDK 58 and Expo Router. The first screen is a
-static diary introduction with the shared Nutrivo theme. It does not load diary
-data or require the API or PostgreSQL to be running.
+React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
+header and bottom tabs for the diary, foods and nutrition targets. Each tab
+currently shows a static introduction using the shared Nutrivo theme. The app
+does not load nutrition data or require the API or PostgreSQL to be running.
 
 ## Run on your phone
 
@@ -61,11 +62,13 @@ The primary development workflow is Expo Go on a physical phone.
 
 ```text
 src/
-  app/                  Expo Router stack and diary entry route
+  app/                  Expo Router tabs: /, /foods and /targets
   features/diary/       Diary screen
+  features/foods/       Foods placeholder screen
+  features/targets/     Nutrition targets placeholder screen
   shared/
     theme/              Typed colors, spacing, radii and typography
-    ui/                 Screen, AppText and Card
+    ui/                 AppHeader, Screen, AppText and Card
 assets/fonts/geist/     Bundled static fonts, source information and OFL license
 ```
 
@@ -76,11 +79,24 @@ export's macro colors. Geist is loaded from bundled files with `expo-font`,
 without runtime requests to Google Fonts. Text retains native font scaling.
 Numeric text styles use tabular figures.
 
-The root stack hides its native header so the diary screen owns the visible
-heading. Shared screens provide safe-area insets and scrolling; the status bar
-uses light symbols. No tab bar, backend client, nutrition calculations or
-demo nutrition data is included. The next slice can replace the introduction
-with the actual diary day without changing the routing shell.
+The root layout uses Expo Router's JavaScript tabs with a shared `AppHeader`.
+The header shows Nutrivo above the current page title and a circular profile
+icon. The profile is labelled for screen readers and has no action yet. The
+bottom bar keeps icons above the labels in portrait and landscape, highlights
+the selected tab in lavender and provides at least 44-point touch targets.
+Its height grows with the native font scale to make room for larger labels.
+
+The header owns the top safe-area inset and the tab bar owns the bottom inset;
+shared screens provide side insets and scrolling between the two bars. The
+status bar uses light symbols. Material Design Icons from
+`@react-native-vector-icons/material-design-icons` are bundled locally and
+preloaded alongside Geist with `expo-font`, without remote font requests or a
+custom native build. Decorative icons are hidden from screen readers.
+
+The diary (`/`) is the initial tab and the Android back-navigation anchor.
+Foods (`/foods`) and targets (`/targets`) are placeholders for later slices.
+Direct URLs work in the web preview. No backend client, nutrition calculations,
+authentication or demo nutrition data is included.
 
 ## Validation
 
@@ -92,11 +108,13 @@ npx expo install --check
 npx expo-doctor
 npx expo export --platform ios --output-dir dist/ios
 npx expo export --platform android --output-dir dist/android
+npx expo export --platform web --output-dir dist/web
 ```
 
 Exports verify bundling and bundled assets; they do not produce installable
 native apps. Generated exports, Metro state and dependencies are ignored by Git.
-Additional test libraries and CI are deferred until the app gains behavior.
+Additional test libraries and CI are deferred; validate this navigation slice
+with linting, type checks, exports and the manual checks below.
 
 ### Dependency audit
 
@@ -109,12 +127,34 @@ the dependency audit is clean.
 Manual acceptance in Expo Go:
 
 1. Open the QR code and check that Nutrivo starts without a runtime error.
-2. Check the dark background, lavender Nutrivo title, Tagebuch heading and card.
-3. Confirm that the screen clears the notch, status bar and bottom gesture area.
-4. Increase the phone's text size and check wrapping and scrolling, also in
-   landscape. No content should be hidden or overlap.
-5. Edit the introduction text and verify Fast Refresh updates the screen.
-6. Reload the app and confirm the locally bundled Geist font loads again.
+2. Check the dark background, lavender Nutrivo title, uppercase page title and
+   circular profile icon. The profile icon must not trigger an action.
+3. Switch between Tagebuch, Lebensmittel and Ziele. Each tab should display its
+   matching introduction and header title; exactly one tab is highlighted.
+   On Android, Back from another tab should return to Tagebuch.
+4. Confirm that the header clears the notch and status bar and the tab bar
+   clears the bottom gesture area. Both bars must stay visible when scrolling.
+5. Increase the phone's text size and check wrapping and scrolling, also in
+   landscape. No content should be hidden or overlap. Check VoiceOver/TalkBack:
+   tabs have names and a selected state, and icon glyphs are not read aloud.
+6. Edit the introduction text and verify Fast Refresh updates the screen.
+7. Reload the app and confirm the locally bundled Geist and icon fonts load.
 
-Visual checks in a web preview complement these steps; physical-device checks
-must be performed on the phone.
+In the web preview, also open `/`, `/foods` and `/targets` directly and reload
+each page. Check a narrow viewport (320 points), a typical phone viewport
+(390 × 844), landscape and increased browser zoom. Visual checks in a web
+preview complement the Expo Go steps; physical-device safe areas, native text
+scaling, screen readers and Android Back must be checked on the phone.
+
+Navigation slice validation on 2026-11-04:
+
+- Lint, strict TypeScript, Expo dependency validation and Expo Doctor (20/20)
+  passed. Exports for iOS, Android and Web succeeded.
+- Web checks passed for all three tabs, direct route loads and reloads at
+  320 × 568, 390 × 844 and 844 × 390. Exactly one tab was selected, with equal
+  tab widths, no horizontal overflow and at least 44-point touch targets.
+- At 320 × 220, the diary content scrolled while the header and tab bar kept
+  their positions. Decorative icon glyphs were absent from the accessibility
+  tree after being hidden explicitly.
+- Physical-device checks, native font scaling and increased browser zoom have
+  not been verified in this environment and remain manual acceptance steps.

@@ -6,7 +6,7 @@ import { theme } from '@/shared/theme/theme';
 
 export function Screen({ children }: PropsWithChildren) {
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView edges={['left', 'right']} style={styles.screen}>
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.content}
