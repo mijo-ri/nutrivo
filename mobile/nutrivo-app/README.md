@@ -1,9 +1,10 @@
 # Nutrivo mobile
 
 React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
-header and bottom tabs for the diary, foods and nutrition targets. Each tab
-currently shows a static introduction using the shared Nutrivo theme. The app
-does not load nutrition data or require the API or PostgreSQL to be running.
+header and bottom tabs for the diary, foods and nutrition targets. The diary
+shows a static design preview with example meals and daily nutrition totals;
+foods and targets still show introductions using the shared Nutrivo theme. The app
+does not fetch nutrition data or require the API or PostgreSQL to be running.
 
 ## Run on your phone
 
@@ -95,8 +96,34 @@ custom native build. Decorative icons are hidden from screen readers.
 
 The diary (`/`) is the initial tab and the Android back-navigation anchor.
 Foods (`/foods`) and targets (`/targets`) are placeholders for later slices.
-Direct URLs work in the web preview. No backend client, nutrition calculations,
-authentication or demo nutrition data is included.
+Direct URLs work in the web preview. No backend client or authentication is
+included.
+
+### Diary design preview
+
+The diary uses local, typed example snapshots in `src/features/diary/`. These
+illustrative values already describe the consumed portions; they are not a
+food database or production nutrition calculations. The screen is labelled
+“Beispieldaten · Nährwerte zur Illustration”. It runs without the API or database.
+
+The date shows today in the device's local timezone. Date selection, day arrows
+and all add-entry buttons are visibly disabled and labelled as disabled for
+assistive technology. Food rows are read-only. There is no persistence or local
+editing, barcode scanning or voice input.
+
+The four expanded meal cards contain breakfast (six entries), lunch (four),
+dinner labelled “Nachtessen” (five), and an empty snacks state. Rice and quinoa
+use 80 g dry portions. Meal and day totals are summed from the same snapshots;
+the example day contains 2’157 kcal, 157 g protein, 205 g carbohydrates and 75 g
+fat. Targets are illustrative: 2’400 kcal, 180 g protein, 260 g carbohydrates
+and 70 g fat, leaving 243 kcal. The fat total deliberately exceeds its example
+target; all progress fills are capped at 100%, with the actual totals still
+shown. Display values share a whole-number `de-CH` formatter.
+
+The preview reuses the existing theme, Geist fonts, header, scrolling screen and
+bottom tabs. Macro rails stack on narrow displays or with larger native text;
+meal names and quantities can wrap. The disabled add-entry actions use an icon
+on narrow displays while retaining their full accessible names.
 
 ## Validation
 
@@ -129,15 +156,16 @@ Manual acceptance in Expo Go:
 1. Open the QR code and check that Nutrivo starts without a runtime error.
 2. Check the dark background, lavender Nutrivo title, uppercase page title and
    circular profile icon. The profile icon must not trigger an action.
-3. Switch between Tagebuch, Lebensmittel and Ziele. Each tab should display its
-   matching introduction and header title; exactly one tab is highlighted.
+3. Switch between Tagebuch, Lebensmittel and Ziele. The diary should display
+   its example day; the other tabs show their matching introduction and header
+   title. Exactly one tab is highlighted.
    On Android, Back from another tab should return to Tagebuch.
 4. Confirm that the header clears the notch and status bar and the tab bar
    clears the bottom gesture area. Both bars must stay visible when scrolling.
 5. Increase the phone's text size and check wrapping and scrolling, also in
    landscape. No content should be hidden or overlap. Check VoiceOver/TalkBack:
    tabs have names and a selected state, and icon glyphs are not read aloud.
-6. Edit the introduction text and verify Fast Refresh updates the screen.
+6. Edit a diary example and verify Fast Refresh updates the screen and totals.
 7. Reload the app and confirm the locally bundled Geist and icon fonts load.
 
 In the web preview, also open `/`, `/foods` and `/targets` directly and reload
@@ -145,6 +173,19 @@ each page. Check a narrow viewport (320 points), a typical phone viewport
 (390 × 844), landscape and increased browser zoom. Visual checks in a web
 preview complement the Expo Go steps; physical-device safe areas, native text
 scaling, screen readers and Android Back must be checked on the phone.
+
+Diary acceptance checks:
+
+1. Verify all 15 food entries and quantities, the four meal headings and the
+   empty snacks state. Meal totals must be 655, 703, 799 and 0 kcal.
+2. Verify the day totals and 243 kcal remaining against the values above.
+   The fat rail must stop at the end of its track despite showing 75/70 g.
+3. Check 320- and 390-point widths, landscape and increased text size. Long food
+   names, quantities and numbers must stay readable without horizontal overflow.
+4. Scroll to snacks; the header and bottom tabs must stay visible and the last
+   disabled add-entry button must be reachable above the tabs.
+5. Check that date and add-entry controls cannot change data and are announced
+   as disabled. Read-only rows must not offer an edit action.
 
 Navigation slice validation on 2026-11-04:
 
@@ -158,3 +199,18 @@ Navigation slice validation on 2026-11-04:
   tree after being hidden explicitly.
 - Physical-device checks, native font scaling and increased browser zoom have
   not been verified in this environment and remain manual acceptance steps.
+
+Diary design validation on 2026-11-04:
+
+- Lint and strict TypeScript passed. `npx expo export --platform all
+  --output-dir dist/diary` successfully bundled iOS, Android and Web.
+- A direct data check verified all 15 names and quantities, meal and day totals,
+  the empty meal and whole-number display rounding.
+- Web checks passed at 320 × 568, 390 × 844 and 844 × 390 with no horizontal
+  overflow. At 320 points, the macro rails stack without overlapping, and snacks
+  remain fully reachable while the header and tabs stay fixed.
+- All seven date/add-entry controls exposed a disabled state and measured at
+  least 44 × 44 points. The fat fill measured exactly the track width; the calorie
+  fill matched 2’157/2’400. The web preview reported no runtime warnings or errors.
+- Physical-device safe areas, native text scaling, screen-reader announcements
+  and increased browser zoom remain manual checks.
