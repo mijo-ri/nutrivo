@@ -13,9 +13,9 @@ import {
 export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
     const { width, fontScale } = useWindowDimensions();
     const compactAction = width < 360 || fontScale > 1.2;
-    const calories = sumNutrition(
+    const nutrition = sumNutrition(
         meal.entries.map(entry => entry.nutrition),
-    ).calories;
+    );
     const empty = meal.entries.length === 0;
 
     return (
@@ -25,11 +25,25 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                     <AppText variant="headlineMd" accessibilityRole="header">
                         {meal.name}
                     </AppText>
-                    <AppText variant="numericSm" tone="secondary">
-                        {formatNutrition(calories)} kcal
-                    </AppText>
+                    <View
+                        accessible
+                        accessibilityLabel={`Protein: ${formatNutrition(nutrition.protein)} Gramm, Kohlenhydrate: ${formatNutrition(nutrition.carbohydrates)} Gramm, Fett: ${formatNutrition(nutrition.fat)} Gramm`}
+                        style={styles.macros}
+                    >
+                        <AppText variant="bodySm" tone="secondary">
+                            P {formatNutrition(nutrition.protein)} g
+                        </AppText>
+                        <AppText variant="bodySm" tone="secondary">
+                            K {formatNutrition(nutrition.carbohydrates)} g
+                        </AppText>
+                        <AppText variant="bodySm" tone="secondary">
+                            F {formatNutrition(nutrition.fat)} g
+                        </AppText>
+                    </View>
                 </View>
-                <AddEntryButton mealName={meal.name} compact={compactAction} />
+                <AppText variant="headlineMd" style={styles.mealCalories}>
+                    {formatNutrition(nutrition.calories)} kcal
+                </AppText>
             </View>
             {empty ? (
                 <View style={styles.empty}>
@@ -73,6 +87,9 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                     </AppText>
                 </View>
             ))}
+            <View style={styles.footer}>
+                <AddEntryButton mealName={meal.name} compact={compactAction} />
+            </View>
         </View>
     );
 }
@@ -120,21 +137,38 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         alignContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
-        columnGap: theme.spacing.sm,
+        gap: theme.spacing.sm,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
         backgroundColor: theme.colors.surfaceHigh,
         minHeight: 60,
     },
     heading: {
-        flex: 1,
+        flexGrow: 1,
+        flexShrink: 1,
+        flexBasis: 180,
+        gap: theme.spacing.xs,
+        minWidth: 0,
+    },
+    macros: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        alignItems: 'center',
-        columnGap: theme.spacing.sm,
-        minWidth: 0,
+        columnGap: theme.spacing.md,
+        rowGap: theme.spacing.xs,
+    },
+    mealCalories: {
+        flexShrink: 1,
+        maxWidth: '100%',
+        marginLeft: 'auto',
+        textAlign: 'right',
+        fontVariant: ['tabular-nums'],
+    },
+    footer: {
+        alignItems: 'flex-end',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
     },
     addButton: {
         minWidth: 28,
