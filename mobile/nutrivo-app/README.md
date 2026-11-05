@@ -2,9 +2,10 @@
 
 React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
 header and bottom tabs for the diary, foods and nutrition targets. The diary
-shows a static design preview with example meals and daily nutrition totals;
-foods and targets still show introductions using the shared Nutrivo theme. The app
-does not fetch nutrition data or require the API or PostgreSQL to be running.
+shows a design preview with example meals and daily nutrition totals. Its add
+buttons open a searchable example food catalogue; foods and targets tabs still
+show introductions using the shared Nutrivo theme. The app does not fetch
+nutrition data or require the API or PostgreSQL to be running.
 
 ## Run on your phone
 
@@ -63,9 +64,10 @@ The primary development workflow is Expo Go on a physical phone.
 
 ```text
 src/
-  app/                  Expo Router tabs: /, /foods and /targets
+  app/                  Root stack with /food-selection
+    (tabs)/             Tabs: /, /foods and /targets
   features/diary/       Diary screen
-  features/foods/       Foods placeholder screen
+  features/foods/       Food selection, example catalogue and foods tab placeholder
   features/targets/     Nutrition targets placeholder screen
   shared/
     theme/              Typed colors, spacing, radii and typography
@@ -80,7 +82,8 @@ export's macro colors. Geist is loaded from bundled files with `expo-font`,
 without runtime requests to Google Fonts. Text retains native font scaling.
 Numeric text styles use tabular figures.
 
-The root layout uses Expo Router's JavaScript tabs with a shared `AppHeader`.
+The root layout uses an Expo Router stack. Its `(tabs)` group contains JavaScript
+tabs with a shared `AppHeader`; `/food-selection` opens above them without a tab bar.
 The header shows Nutrivo above the current page title and a circular profile
 icon. The profile is labelled for screen readers and has no action yet. The
 bottom bar keeps icons above the labels in portrait and landscape, highlights
@@ -103,13 +106,12 @@ included.
 
 The diary uses local, typed example snapshots in `src/features/diary/`. These
 illustrative values already describe the consumed portions; they are not a
-food database or production nutrition calculations. The screen is labelled
-“Beispieldaten · Nährwerte zur Illustration”. It runs without the API or database.
+food database or production nutrition calculations. It runs without the API or database.
 
-The date shows today in the device's local timezone. Date selection, day arrows
-and all add-entry buttons are visibly disabled and labelled as disabled for
-assistive technology. Food rows are read-only. There is no persistence or local
-editing, barcode scanning or voice input.
+The date shows today in the device's local timezone. Date selection and day arrows
+are visibly disabled and labelled as disabled for assistive technology. Add-entry
+buttons open food selection for their respective meal. Food rows are read-only.
+There is no persistence or local editing, barcode scanning or voice input.
 
 The four expanded meal cards contain breakfast (six entries), lunch (four),
 dinner labelled “Nachtessen” (five), and an empty snacks state. Rice and quinoa
@@ -122,8 +124,40 @@ shown. Display values share a whole-number `de-CH` formatter.
 
 The preview reuses the existing theme, Geist fonts, header, scrolling screen and
 bottom tabs. Macro rails stack on narrow displays or with larger native text;
-meal names and quantities can wrap. The disabled add-entry actions use an icon
-on narrow displays while retaining their full accessible names.
+meal names and quantities can wrap. The add-entry actions use compact chips with
+a minimum visual size of 28 points and an 8-point touch-area extension on each
+side. On narrow displays they use an icon while retaining their full accessible
+names.
+
+### Food selection preview
+
+Each meal's add button opens `/food-selection?meal=breakfast|lunch|dinner|snacks`
+using one of those four IDs. The full-screen header shows “Lebensmittel auswählen”
+and the meal name. Missing, repeated or unknown meal parameters show a general
+header. The back button returns to the previous screen, retaining diary scroll
+position; without navigation history it falls back to `/`. The root stack anchors
+direct links to the tabs so native Android Back can return there as well.
+
+The search field stays above a separately scrolling result list. It starts empty
+on each opening, with “Suche nach Lebensmitteln oder Marken” and no food rows.
+The keyboard opens only when the input is tapped. Local search trims outer
+whitespace and matches a contiguous substring of either name or brand,
+case-insensitively. Results sort by name and then brand using `de-CH` ordering.
+Clearing the field restores the initial hint; unmatched queries show
+“Keine Lebensmittel gefunden”.
+
+The separate, typed catalogue in `src/features/foods/foodExamples.ts` contains
+illustrative values per 100 g or 100 ml, including example brands and unbranded
+foods. These are not inferred from consumed diary portions. Each row shows its
+name, optional brand and whole-number `de-CH` kcal with the explicit reference
+unit. Rows stack their nutrition below the name on narrow screens or with large
+native text. They are read-only: no quantity entry, selection action, saving,
+network requests or changes to diary totals are included.
+
+For static web exports, `useIsClient` defers device-dependent diary content and
+the URL-dependent meal subtitle until hydration. The static HTML and initial
+browser render therefore agree; native rendering and later client navigation
+show this content immediately.
 
 ## Validation
 
@@ -183,9 +217,9 @@ Diary acceptance checks:
 3. Check 320- and 390-point widths, landscape and increased text size. Long food
    names, quantities and numbers must stay readable without horizontal overflow.
 4. Scroll to snacks; the header and bottom tabs must stay visible and the last
-   disabled add-entry button must be reachable above the tabs.
-5. Check that date and add-entry controls cannot change data and are announced
-   as disabled. Read-only rows must not offer an edit action.
+   add-entry button must be reachable above the tabs.
+5. Check that date controls cannot change data and are announced as disabled.
+   Add-entry controls open food selection; read-only rows offer no edit action.
 
 Navigation slice validation on 2026-11-04:
 
@@ -214,3 +248,43 @@ Diary design validation on 2026-11-04:
   fill matched 2’157/2’400. The web preview reported no runtime warnings or errors.
 - Physical-device safe areas, native text scaling, screen-reader announcements
   and increased browser zoom remain manual checks.
+
+Food selection acceptance checks:
+
+1. Open selection from all four meal buttons and verify the matching meal title,
+   hidden tabs and empty initial search. Return using the header button and
+   Android Back; the diary must retain its previous scroll position and totals.
+2. Search ` HaFeRfLoCkEn `: both oat examples must appear, sorted by brand. Search
+   `ALPEN`: name/brand matches must appear. Search `flocken`: both oats match.
+   A query containing only spaces must show the initial hint.
+3. Search `xyznotfound`: verify the no-results message. Clear the search, then
+   return to the diary and reopen: both paths must restore an empty search.
+4. Search `Apfel`, `Milch` and `Wasser`: verify absent brands are omitted, gram
+   and milliliter labels are correct, and zero kcal is displayed. Search
+   `Räuchertofu` to check wrapping of the long name and brand.
+5. At 320- and 390-point widths, landscape and larger font sizes, verify no
+   horizontal overflow, accessible touch targets and readable text. With the
+   native keyboard open, ensure results can scroll while the search stays fixed.
+6. Check VoiceOver/TalkBack labels, focus indication on the input and read-only
+   food announcements with kcal and reference unit.
+7. Load and reload `/food-selection`, a valid meal link and
+   `/food-selection?meal=invalid` directly. Verify the generic or meal header and
+   back navigation. Confirm `/`, `/foods` and `/targets` still work directly.
+
+Food selection validation on 2026-11-05:
+
+- Lint and strict TypeScript checks passed. Production exports for iOS, Android
+  and Web succeeded, including a final combined `expo export --platform all`.
+- Local assertions passed for name/brand substring matching, whitespace, case,
+  sorting, missing brands, reference units, zero kcal, unique example IDs and
+  valid/invalid meal parameters.
+- Browser checks covered all four meal contexts, empty/no-result/clear states,
+  repeated opening, existing routes and direct search links with reloads. Diary
+  scroll position was retained (952 points before and after), and the four add
+  buttons each measured at least 44 points in both dimensions.
+- Layout checks passed at 320 × 568, 390 × 844 and 844 × 390, including long food
+  names and an independently scrolling result list below the fixed search.
+  Final direct-route checks reported no browser warnings or errors after the
+  static hydration adjustment.
+- Physical-device safe areas, keyboard avoidance, native font scaling,
+  VoiceOver/TalkBack, Android hardware Back and browser zoom remain manual checks.

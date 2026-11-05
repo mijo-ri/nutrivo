@@ -1,6 +1,7 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { useIsClient } from '@/shared/hooks/useIsClient';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 import { Screen } from '@/shared/ui/Screen';
@@ -18,6 +19,13 @@ const dateFormat = new Intl.DateTimeFormat('de-CH', {
 });
 
 export function DiaryScreen() {
+    const isClient = useIsClient();
+
+    // Date and responsive labels depend on the device, not the static exporter.
+    if (!isClient) {
+        return null;
+    }
+
     const today = dateFormat.format(new Date());
 
     return (
@@ -56,7 +64,7 @@ export function DiaryScreen() {
             <DiarySummary total={total} targets={exampleTargets} />
             <View style={styles.meals}>
                 {exampleMeals.map(meal => (
-                    <DiaryMealCard key={meal.name} meal={meal} />
+                    <DiaryMealCard key={meal.id} meal={meal} />
                 ))}
             </View>
         </Screen>

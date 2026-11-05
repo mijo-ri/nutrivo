@@ -1,4 +1,5 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { theme } from '@/shared/theme/theme';
@@ -9,6 +10,7 @@ import {
     sumNutrition,
     type DiaryExampleMeal,
 } from './diaryExample';
+import { type MealId } from './diaryMeals';
 
 export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
     const { width, fontScale } = useWindowDimensions();
@@ -88,28 +90,34 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                 </View>
             ))}
             <View style={styles.footer}>
-                <AddEntryButton mealName={meal.name} compact={compactAction} />
+                <AddEntryButton mealId={meal.id} mealName={meal.name} compact={compactAction} />
             </View>
         </View>
     );
 }
 
 function AddEntryButton({
+    mealId,
     mealName,
     compact = false,
 }: {
+    mealId: MealId;
     mealName: string;
     compact?: boolean;
 }) {
+    const router = useRouter();
+
     return (
         <Pressable
-            disabled
+            onPress={() => router.push({
+                pathname: '/food-selection',
+                params: { meal: mealId },
+            })}
             accessibilityRole="button"
             accessibilityLabel={`Eintrag zu ${mealName} hinzufügen`}
-            accessibilityHint="In der Designansicht noch nicht verfügbar"
-            accessibilityState={{ disabled: true }}
+            accessibilityHint="Öffnet die Lebensmittelsuche"
             hitSlop={theme.spacing.sm}
-            style={styles.addButton}
+            style={({ pressed }) => [styles.addButton, pressed && styles.pressedButton]}
         >
             <MaterialDesignIcons
                 name="plus"
@@ -183,7 +191,9 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing.xs,
         borderRadius: theme.radii.full,
         backgroundColor: theme.colors.primary,
-        opacity: 0.45,
+    },
+    pressedButton: {
+        opacity: 0.75,
     },
     addButtonText: {
         color: theme.colors.onPrimary,

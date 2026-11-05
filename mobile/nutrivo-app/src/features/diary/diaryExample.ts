@@ -1,3 +1,5 @@
+import { mealNames, type MealId } from './diaryMeals';
+
 // Illustrative, already portioned snapshots for the design preview only.
 // Real nutrition calculations and rules remain authoritative in the backend.
 export type Nutrition = Readonly<{
@@ -14,6 +16,7 @@ export type DiaryExampleEntry = Readonly<{
 }>;
 
 export type DiaryExampleMeal = Readonly<{
+    id: MealId;
     name: string;
     entries: readonly DiaryExampleEntry[];
 }>;
@@ -27,7 +30,8 @@ export const exampleTargets: Nutrition = {
 
 export const exampleMeals: readonly DiaryExampleMeal[] = [
     {
-        name: 'Frühstück',
+        id: 'breakfast',
+        name: mealNames.breakfast,
         entries: [
             {
                 name: 'Haferflocken',
@@ -92,7 +96,8 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
         ],
     },
     {
-        name: 'Mittagessen',
+        id: 'lunch',
+        name: mealNames.lunch,
         entries: [
             {
                 name: 'Reis',
@@ -137,7 +142,8 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
         ],
     },
     {
-        name: 'Nachtessen',
+        id: 'dinner',
+        name: mealNames.dinner,
         entries: [
             {
                 name: 'Quinoa',
@@ -191,7 +197,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
         ],
     },
-    { name: 'Snacks', entries: [] },
+    { id: 'snacks', name: mealNames.snacks, entries: [] },
 ];
 
 export function sumNutrition(values: readonly Nutrition[]): Nutrition {
