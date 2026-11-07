@@ -1,12 +1,13 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { type ComponentRef, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { useIsClient } from '@/shared/hooks/useIsClient';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 import { Screen } from '@/shared/ui/Screen';
 
+import { DiaryDatePicker } from './DiaryDatePicker';
 import { DiaryMealCard } from './DiaryMealCard';
 import { DiarySummary } from './DiarySummary';
 import { exampleMeals, exampleTargets, sumNutrition } from './diaryExample';
@@ -23,10 +24,13 @@ const weekdayDateFormat = new Intl.DateTimeFormat('de-CH', {
     day: 'numeric',
     month: 'short',
 });
+const accessibleDateFormat = new Intl.DateTimeFormat('de-CH', { dateStyle: 'full' });
 
 export function DiaryScreen() {
     const isClient = useIsClient();
     const [selectedDate, setSelectedDate] = useState(() => new Date());
+    const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+    const dateButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
 
     // Date and responsive labels depend on the device, not the static exporter.
     if (!isClient) {
@@ -46,17 +50,25 @@ export function DiaryScreen() {
         });
     }
 
+    function closeDatePicker() {
+        setDatePickerOpen(false);
+        if (Platform.OS === 'web') {
+            requestAnimationFrame(() => dateButtonRef.current?.focus());
+        }
+    }
+
     return (
         <Screen>
             <View style={styles.dateSection}>
                 <View style={styles.dateBar}>
                     <DateArrow direction="left" onPress={() => changeDate(-1)} />
                     <Pressable
-                        disabled
+                        ref={dateButtonRef}
+                        onPress={() => setDatePickerOpen(true)}
                         accessibilityRole="button"
-                        accessibilityLabel={`Datum auswählen: ${dateLabel}`}
-                        accessibilityState={{ disabled: true }}
-                        style={styles.date}
+                        accessibilityLabel={`Datum auswählen: ${accessibleDateFormat.format(selectedDate)}`}
+                        accessibilityState={{ expanded: isDatePickerOpen }}
+                        style={({ pressed }) => [styles.date, pressed && styles.datePressed]}
                     >
                         <MaterialDesignIcons
                             name="calendar-blank-outline"
@@ -79,6 +91,16 @@ export function DiaryScreen() {
                     <DateArrow direction="right" onPress={() => changeDate(1)} />
                 </View>
             </View>
+            {isDatePickerOpen && (
+                <DiaryDatePicker
+                    value={selectedDate}
+                    onCancel={closeDatePicker}
+                    onConfirm={date => {
+                        setSelectedDate(date);
+                        closeDatePicker();
+                    }}
+                />
+            )}
             <DiarySummary total={total} targets={exampleTargets} />
             <View style={styles.meals}>
                 {exampleMeals.map(meal => (
@@ -145,7 +167,9 @@ const styles = StyleSheet.create({
         padding: theme.spacing.xs,
         borderRadius: theme.radii.sm,
         backgroundColor: theme.colors.surface,
-        opacity: 0.65,
+    },
+    datePressed: {
+        backgroundColor: theme.colors.surfaceHighest,
     },
     dateText: {
         flexShrink: 1,

@@ -112,9 +112,19 @@ The selected date starts at today in the device's local timezone. The day arrows
 move one local calendar day backward or forward, including future days. Today is
 labelled “Heute”; other dates show the short weekday, day and month in `de-CH`.
 The example entries, totals and targets stay the same for every selected date.
-Reloading resets the selected date to today. The central date button remains
-visibly disabled and labelled as disabled for assistive technology; a date picker
-will follow later. Add-entry buttons open food selection for their respective
+Reloading resets the selected date to today. Tap the central date button to
+select a date directly: Android opens its system date dialog; iOS shows a native
+monthly calendar with “Abbrechen” and “Übernehmen”. The web preview uses a labelled
+browser date field in a modal with the same actions. Only confirmation changes
+the diary date; cancelling keeps the previous selection. Past and future dates
+are available. Native pickers follow the device language, the browser field follows
+the browser locale, and the diary label stays in `de-CH`. Dates are interpreted
+in the device's local timezone, without UTC conversion.
+
+The native picker uses `@react-native-community/datetimepicker`, installed through
+`npx expo install` to match the Expo SDK and work in Expo Go. Its native imports
+are excluded from web through a platform-specific component. No custom native
+build is required. Add-entry buttons open food selection for their respective
 meal. Food rows are read-only. There is no persistence or local editing, barcode
 scanning or voice input.
 
@@ -230,9 +240,41 @@ Diary acceptance checks:
 6. Check month and year boundaries, February 29 in a leap year, and local daylight
    saving transitions. Each tap must move exactly one local calendar day.
 7. Verify both arrows are enabled, named “Vorheriger Tag” and “Nächster Tag”, and
-   retain touch targets of at least 44 × 44 points. Only the central date button
-   is disabled and must not open a picker. Add-entry controls open food selection;
-   read-only rows offer no edit action.
+   retain touch targets of at least 44 × 44 points. The central date button is
+   enabled, has visible press feedback, and its accessible name includes the year.
+   Add-entry controls open food selection; read-only rows offer no edit action.
+8. Open the date picker on iOS and Android in Expo Go and in the browser. Verify
+   it starts at the selected diary day. Select a different past or future day and
+   confirm; verify the label, then navigate with both arrows. Repeat for a month
+   boundary, year boundary, February 29, and the local daylight saving changes.
+   Entries, totals and targets must remain unchanged.
+9. Change the draft selection and cancel. Reopen and verify the original diary
+   date is still selected. On Android, also cancel with the system Back button.
+   Rapid taps and repeated opening/closing must not stack dialogs. Navigate away
+   from the diary while Android's dialog is open and verify it is dismissed.
+10. In the browser, clear the date field or enter an incomplete/invalid date:
+    “Übernehmen” must be disabled. Tab and Shift+Tab must stay inside the modal;
+    Escape cancels and focus returns to the date button after cancelling or
+    confirming. Verify date entry and confirmation using only the keyboard.
+11. Repeat the picker checks at small widths/heights, in landscape, and with
+    increased text size. The iOS calendar and all actions must remain reachable
+    by scrolling vertically; the native calendar also scrolls horizontally if
+    its intrinsic width exceeds a narrow window. Use VoiceOver/TalkBack to check
+    the dialog and action labels.
+
+Date picker validation on 2026-11-07:
+
+- Lint, strict TypeScript, Expo dependency validation and Expo Doctor (20/20)
+  passed. Exports for iOS, Android and Web succeeded.
+- Browser checks covered confirmation, cancellation, empty/incomplete input,
+  Escape, Tab/Shift+Tab focus containment, focus restoration and resetting to
+  today on reload. Calendar checks covered February 29, month/year boundaries
+  and dates of local daylight saving transitions, including subsequent arrows.
+- The web dialog remained usable at 390 × 844 and 320 × 220. Browser warning/error
+  logs were empty. Direct checks of the web date parser also passed in
+  Europe/Zurich, America/Los_Angeles and Pacific/Auckland, including invalid dates.
+- Native Expo Go, VoiceOver/TalkBack and native large-text checks remain manual:
+  no simulator or connected physical device was available for this validation.
 
 Navigation slice validation on 2026-11-04:
 
