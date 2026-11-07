@@ -1,4 +1,5 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useIsClient } from '@/shared/hooks/useIsClient';
@@ -17,26 +18,43 @@ const dateFormat = new Intl.DateTimeFormat('de-CH', {
     day: 'numeric',
     month: 'short',
 });
+const weekdayDateFormat = new Intl.DateTimeFormat('de-CH', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+});
 
 export function DiaryScreen() {
     const isClient = useIsClient();
+    const [selectedDate, setSelectedDate] = useState(() => new Date());
 
     // Date and responsive labels depend on the device, not the static exporter.
     if (!isClient) {
         return null;
     }
 
-    const today = dateFormat.format(new Date());
+    const isToday = selectedDate.toDateString() === new Date().toDateString();
+    const dateLabel = isToday
+        ? `Heute, ${dateFormat.format(selectedDate)}`
+        : weekdayDateFormat.format(selectedDate);
+
+    function changeDate(days: -1 | 1) {
+        setSelectedDate(previousDate => {
+            const nextDate = new Date(previousDate);
+            nextDate.setDate(nextDate.getDate() + days);
+            return nextDate;
+        });
+    }
 
     return (
         <Screen>
             <View style={styles.dateSection}>
                 <View style={styles.dateBar}>
-                    <DateArrow direction="left" />
+                    <DateArrow direction="left" onPress={() => changeDate(-1)} />
                     <Pressable
                         disabled
                         accessibilityRole="button"
-                        accessibilityLabel={`Datum auswählen: Heute, ${today}`}
+                        accessibilityLabel={`Datum auswählen: ${dateLabel}`}
                         accessibilityState={{ disabled: true }}
                         style={styles.date}
                     >
@@ -48,7 +66,7 @@ export function DiaryScreen() {
                             aria-hidden
                         />
                         <AppText variant="headlineMd" style={styles.dateText}>
-                            Heute, {today}
+                            {dateLabel}
                         </AppText>
                         <MaterialDesignIcons
                             name="chevron-down"
@@ -58,7 +76,7 @@ export function DiaryScreen() {
                             aria-hidden
                         />
                     </Pressable>
-                    <DateArrow direction="right" />
+                    <DateArrow direction="right" onPress={() => changeDate(1)} />
                 </View>
             </View>
             <DiarySummary total={total} targets={exampleTargets} />
@@ -71,15 +89,20 @@ export function DiaryScreen() {
     );
 }
 
-function DateArrow({ direction }: { direction: 'left' | 'right' }) {
+function DateArrow({
+    direction,
+    onPress,
+}: {
+    direction: 'left' | 'right';
+    onPress: () => void;
+}) {
     return (
         <Pressable
-            disabled
+            onPress={onPress}
             accessibilityRole="button"
             accessibilityLabel={
                 direction === 'left' ? 'Vorheriger Tag' : 'Nächster Tag'
             }
-            accessibilityState={{ disabled: true }}
             style={styles.dateArrow}
         >
             <MaterialDesignIcons
@@ -111,7 +134,6 @@ const styles = StyleSheet.create({
         minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: 0.45,
     },
     date: {
         minHeight: 44,

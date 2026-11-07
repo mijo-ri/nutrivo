@@ -108,10 +108,15 @@ The diary uses local, typed example snapshots in `src/features/diary/`. These
 illustrative values already describe the consumed portions; they are not a
 food database or production nutrition calculations. It runs without the API or database.
 
-The date shows today in the device's local timezone. Date selection and day arrows
-are visibly disabled and labelled as disabled for assistive technology. Add-entry
-buttons open food selection for their respective meal. Food rows are read-only.
-There is no persistence or local editing, barcode scanning or voice input.
+The selected date starts at today in the device's local timezone. The day arrows
+move one local calendar day backward or forward, including future days. Today is
+labelled “Heute”; other dates show the short weekday, day and month in `de-CH`.
+The example entries, totals and targets stay the same for every selected date.
+Reloading resets the selected date to today. The central date button remains
+visibly disabled and labelled as disabled for assistive technology; a date picker
+will follow later. Add-entry buttons open food selection for their respective
+meal. Food rows are read-only. There is no persistence or local editing, barcode
+scanning or voice input.
 
 The four expanded meal cards contain breakfast (six entries), lunch (four),
 dinner labelled “Nachtessen” (five), and an empty snacks state. Rice and quinoa
@@ -218,8 +223,16 @@ Diary acceptance checks:
    names, quantities and numbers must stay readable without horizontal overflow.
 4. Scroll to snacks; the header and bottom tabs must stay visible and the last
    add-entry button must be reachable above the tabs.
-5. Check that date controls cannot change data and are announced as disabled.
-   Add-entry controls open food selection; read-only rows offer no edit action.
+5. Navigate backward, forward beyond today, and back to today. Verify the “Heute”
+   label only appears for today, with short weekdays for other dates. Tap rapidly
+   and confirm each tap moves one calendar day. Entries, totals and targets must
+   remain unchanged. Reload and confirm the selected date resets to today.
+6. Check month and year boundaries, February 29 in a leap year, and local daylight
+   saving transitions. Each tap must move exactly one local calendar day.
+7. Verify both arrows are enabled, named “Vorheriger Tag” and “Nächster Tag”, and
+   retain touch targets of at least 44 × 44 points. Only the central date button
+   is disabled and must not open a picker. Add-entry controls open food selection;
+   read-only rows offer no edit action.
 
 Navigation slice validation on 2026-11-04:
 
