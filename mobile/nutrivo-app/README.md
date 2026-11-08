@@ -3,8 +3,9 @@
 React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
 header and bottom tabs for the diary, foods and nutrition targets. The diary
 supports adding foods by direct quantity or serving count, with per-day entries
-and live meal/day nutrition totals. Its add buttons open a searchable food catalogue. The foods tab supports searching, viewing
-and creating foods with nutrition and serving sizes; targets remains a placeholder.
+and live meal/day nutrition totals. Its add buttons open a searchable food catalogue.
+The foods tab supports searching, viewing, creating, editing and deleting foods
+with nutrition and serving sizes; targets remains a placeholder.
 The app does not fetch nutrition data or require the API or PostgreSQL to be running.
 
 ## Run on your phone
@@ -67,7 +68,7 @@ src/
   app/                  Root stack with food selection, diary entry creation and food management
     (tabs)/             Tabs: /, /foods and /targets
   features/diary/       Diary screen, session state and entry creation
-  features/foods/       Food catalogue, session state, search, creation and details
+  features/foods/       Food catalogue, session state, search and shared create/edit form
   features/targets/     Nutrition targets placeholder screen
   shared/
     theme/              Typed colors, spacing, radii and typography
@@ -83,7 +84,7 @@ without runtime requests to Google Fonts. Text retains native font scaling.
 Numeric text styles use tabular figures.
 
 The root layout uses an Expo Router stack. Its `(tabs)` group contains JavaScript
-tabs with a shared `AppHeader`; `/food-selection`, `/diary-entry-create`, `/food-create` and `/food-details`
+tabs with a shared `AppHeader`; `/food-selection`, `/diary-entry-create`, `/food-create`, `/food-edit` and `/food-details`
 open above them without a tab bar.
 The header shows Nutrivo above the current page title and a circular profile
 icon. The profile is labelled for screen readers and has no action yet. The
@@ -170,7 +171,7 @@ values are independent of consumed diary portions. Each row shows its name,
 optional brand and `de-CH` kcal with up to two fractional digits and an explicit
 reference quantity and unit. Rows stack their nutrition below the name on narrow
 screens or with large native text. Tapping a result opens quantity entry; the
-separate food catalogue continues to open read-only food details.
+separate food catalogue opens food details with edit and delete actions.
 
 For static web exports, `useIsClient` defers device-dependent diary content and
 the URL-dependent meal subtitle and food detail content until hydration. The
@@ -255,14 +256,57 @@ details. The header back button returns to foods, including on direct links;
 “Abbrechen” or leaving the form discards the draft. Missing, repeated or unknown
 detail IDs show a not-found message and a link to the catalogue.
 
+“Bearbeiten” opens `/food-edit?id=…` with the shared creation form. All fields,
+including optional brand and portions, are populated without display rounding,
+grouping separators or scientific notation. “Änderungen speichern” updates the
+same food and returns to its details; cancel/header Back discards the draft and
+returns to details, also on direct links. Android hardware Back behaves the same.
+Existing portion IDs are retained; added portions receive fresh IDs. Changing the
+reference quantity or unit never rescales nutrition or portion equivalents.
+Missing, repeated or unknown edit IDs show the not-found state; updates never
+recreate a deleted food. All example foods can be edited or deleted.
+
+The red “Löschen” action opens a modal naming the food and explaining that existing
+diary entries remain unchanged. Only “Löschen” inside the modal removes the food
+and returns to the catalogue. “Abbrechen”, Escape on web and Android hardware
+Back close the modal without deleting. The modal confines keyboard focus and
+returns it to the delete action when cancelled.
+
 `FoodsProvider` holds the catalogue above the router stack using React Context
 and state. New foods are available immediately in the foods tab and diary search.
 Switching screens retains them; restarting or reloading resets to the examples.
 A direct link to a session-created food after reload therefore shows not found.
 Diary search can log these foods immediately; saved diary entries hold independent
 food and serving snapshots and unrounded consumed nutrients.
-There is no backend integration, persistent storage, editing or deletion of saved
-foods, and no new dependencies.
+Edits immediately appear in the catalogue and diary search; deleted foods disappear
+from both. Existing diary entries retain their names, brands, units, portions,
+nutrition and totals after catalogue edits or deletion. New entries use the latest
+catalogue values. There is no backend integration, persistent storage or new dependency.
+
+Food editing/deletion acceptance checks:
+
+1. Create a food, then edit every field, including g/ml, optional brand, zero
+   nutrients and several portions. Save, reopen and verify all values and ordering.
+   Check existing portions retain their identity and removed portions stay removed.
+2. Check decimal comma/point, small numbers such as 0.0000001 and values with more
+   than two decimal places: reopening must preserve the stored value. Invalid
+   fields and incomplete portions must block saving; rapid repeated saves must
+   not create another food. Changing a reference must not convert other values.
+3. Change a draft, then cancel or use header/Android Back. Details must retain the
+   original values. Open `/food-edit?id=milk` directly and verify save and cancel
+   both return to details without depending on prior navigation.
+4. Cancel deletion with the button, Escape and Android Back. Verify the food stays,
+   initial focus is inside the dialog, Tab/Shift+Tab stay inside, and focus returns
+   to the delete action. Confirm deletion and check both catalogue and diary search.
+5. Log a food, edit its name, nutrients, reference unit and portions, and log it
+   again. The first entry must retain its snapshot; the second must use new values.
+   Delete the food: both entries and all totals must remain unchanged.
+6. Open `/food-edit`, an unknown ID and repeated IDs directly. Verify the not-found
+   state and return to the catalogue. Reload a session-created food's edit link:
+   it must show not found, while example edits/deletions reset on reload.
+7. Check 320/390-point widths, landscape, large text, keyboard-only operation,
+   VoiceOver/TalkBack and native keyboard avoidance. Forms and dialogs must scroll
+   without horizontal overflow and all actions must stay reachable.
 
 Food management acceptance checks:
 
@@ -501,3 +545,27 @@ Diary quantity-entry validation on 2026-11-08:
 - Native runtime/device tests were unavailable (`xcrun simctl` is not installed).
   Physical-device safe areas, keyboard avoidance, native large text, browser zoom,
   VoiceOver/TalkBack and Android hardware Back remain manual checks.
+
+Food editing/deletion validation on 2026-11-08:
+
+- Strict TypeScript, lint and production exports for iOS, Android and Web passed.
+- Browser checks covered creation through the shared form, edit prefilling,
+  changes to every field, optional brand, g/ml, zero macros, adding/removing
+  portions, required-field errors, cancelling drafts and repeated save clicks.
+  Reopening preserved 60.12345678901234 kcal and 0.0000001 kcal without rounding.
+- After logging an apple as 1 Stück = 150 g (78 kcal), editing it to 2 EL = 30 ml
+  with new reference values left the original entry unchanged. A new booking
+  used the updated values (59.63 kcal preview). Deletion removed it from both
+  searches while retaining both snapshots and the 2'295 kcal daily total.
+- Delete checks covered confirmation, button/Escape cancellation, initial focus
+  on cancel, Tab/Shift+Tab containment and focus restoration to the trigger.
+  Direct edit links returned to details on both save and cancel. Missing,
+  unknown and repeated IDs showed not found; a new session could not resolve
+  an earlier session-created food.
+- Forms/dialogs were checked at 320 × 568, 390 × 844 and 844 × 390. Page widths
+  matched the viewport at 320 and 844 pixels. Unit selection supported Space
+  and arrow keys, form actions remained reachable, and final browser logs
+  contained no runtime warnings or errors.
+- No native simulator was available (`xcrun simctl` is not installed). Native
+  safe areas, keyboard avoidance, large text, VoiceOver/TalkBack, Android
+  hardware Back and increased browser zoom remain manual acceptance checks.

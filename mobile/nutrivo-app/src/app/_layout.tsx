@@ -73,6 +73,7 @@ export default function RootLayout() {
                                 <Stack.Screen name="food-selection" />
                                 <Stack.Screen name="diary-entry-create" />
                                 <Stack.Screen name="food-create" />
+                                <Stack.Screen name="food-edit" />
                                 <Stack.Screen name="food-details" />
                             </Stack>
                         </DiaryProvider>

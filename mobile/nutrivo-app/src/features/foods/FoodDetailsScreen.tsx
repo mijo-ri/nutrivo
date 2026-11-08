@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRef, useState } from 'react';
 
 import { useIsClient } from '@/shared/hooks/useIsClient';
 import { AppText } from '@/shared/ui/AppText';
@@ -6,12 +7,15 @@ import { Card } from '@/shared/ui/Card';
 
 import { formatFoodNumber, formatFoodQuantity } from './food';
 import { FoodButton } from './FoodButton';
+import { FoodDeleteDialog } from './FoodDeleteDialog';
 import { FoodPage } from './FoodPage';
 import { useFoods } from './FoodsProvider';
 
 export function FoodDetailsScreen() {
     const { id } = useLocalSearchParams<{ id?: string | string[] }>();
-    const { foods } = useFoods();
+    const { foods, deleteFood } = useFoods();
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const deleted = useRef(false);
     const router = useRouter();
     const isClient = useIsClient();
     const food = typeof id === 'string' ? foods.find(item => item.id === id) : undefined;
@@ -41,6 +45,21 @@ export function FoodDetailsScreen() {
                             </AppText>
                         ))}
                     </Card>
+                    <FoodButton label="Bearbeiten" onPress={() => router.push({ pathname: '/food-edit', params: { id: food.id } })} />
+                    <FoodButton label="Löschen" destructive onPress={() => setConfirmDelete(true)} />
+                    {confirmDelete && (
+                        <FoodDeleteDialog
+                            name={food.name}
+                            onCancel={() => setConfirmDelete(false)}
+                            onConfirm={() => {
+                                if (deleted.current) return;
+                                deleted.current = true;
+                                setConfirmDelete(false);
+                                deleteFood(food.id);
+                                router.dismissTo('/foods');
+                            }}
+                        />
+                    )}
                 </>
             ) : (
                 <Card>

@@ -21,7 +21,8 @@ export type Food = Readonly<{
 }>;
 
 export type NewFood = Omit<Food, 'id' | 'servingSizes'> & {
-    servingSizes: readonly Omit<ServingSize, 'id'>[];
+    // Updates retain existing serving IDs; creation always assigns fresh IDs.
+    servingSizes: readonly (Omit<ServingSize, 'id'> & { id?: string })[];
 };
 
 const foodOrder = new Intl.Collator('de-CH', { sensitivity: 'base' });
