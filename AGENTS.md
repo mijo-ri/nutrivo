@@ -91,6 +91,7 @@ LLMs may interpret language but should not invent nutritional values when truste
 Ambiguous matches must be shown to the user.
 
 ## Testing
+Do not create automated frontend tests or introduce frontend test infrastructure until explicitly requested. For now, validate frontend changes with linting, TypeScript checks and manual checks.
 Domain tests cover nutritional calculations, quantity conversion, rounding, diary rules, targets and invariants without requiring a database.
 Application tests cover command/query behaviour and avoid unnecessary internal mocking.
 Integration tests cover EF Core mappings, PostgreSQL queries, API behaviour and authentication when introduced.
@@ -108,7 +109,7 @@ Prefer Testcontainers for PostgreSQL integration tests.
 
 ## Docker and CI/CD
 Use Docker Compose for local API + PostgreSQL when useful and multi-stage Docker builds.
-GitHub Actions should restore dependencies, build, run backend tests, lint/type-check mobile code, run mobile tests and build artifacts.
+GitHub Actions should restore dependencies, build, run backend tests, lint/type-check mobile code and build artifacts. Run mobile tests only once they have been explicitly introduced.
 Deploy only after successful validation.
 
 ## Cloud

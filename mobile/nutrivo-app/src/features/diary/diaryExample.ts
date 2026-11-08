@@ -11,7 +11,8 @@ export type Nutrition = Readonly<{
 
 export type DiaryExampleEntry = Readonly<{
     name: string;
-    quantity: string;
+    quantity: number;
+    quantityNote?: string;
     nutrition: Nutrition;
 }>;
 
@@ -35,7 +36,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
         entries: [
             {
                 name: 'Haferflocken',
-                quantity: '50 g',
+                quantity: 50,
                 nutrition: {
                     calories: 185,
                     protein: 7,
@@ -45,7 +46,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Magerquark',
-                quantity: '100 g',
+                quantity: 100,
                 nutrition: {
                     calories: 67,
                     protein: 12,
@@ -55,7 +56,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Whey Protein Vanille',
-                quantity: '30 g',
+                quantity: 30,
                 nutrition: {
                     calories: 114,
                     protein: 24,
@@ -65,7 +66,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Banane',
-                quantity: '100 g',
+                quantity: 100,
                 nutrition: {
                     calories: 89,
                     protein: 1,
@@ -75,7 +76,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Apfel',
-                quantity: '150 g',
+                quantity: 150,
                 nutrition: {
                     calories: 78,
                     protein: 0,
@@ -85,7 +86,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Erdnussmus',
-                quantity: '20 g',
+                quantity: 20,
                 nutrition: {
                     calories: 122,
                     protein: 5,
@@ -101,7 +102,8 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
         entries: [
             {
                 name: 'Reis',
-                quantity: '80 g trocken',
+                quantity: 80,
+                quantityNote: 'trocken',
                 nutrition: {
                     calories: 280,
                     protein: 6,
@@ -111,7 +113,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Pouletbrust',
-                quantity: '200 g',
+                quantity: 200,
                 nutrition: {
                     calories: 220,
                     protein: 46,
@@ -121,7 +123,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Olivenöl',
-                quantity: '15 g',
+                quantity: 15,
                 nutrition: {
                     calories: 135,
                     protein: 0,
@@ -131,7 +133,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Brokkoli',
-                quantity: '200 g',
+                quantity: 200,
                 nutrition: {
                     calories: 68,
                     protein: 5,
@@ -147,7 +149,8 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
         entries: [
             {
                 name: 'Quinoa',
-                quantity: '80 g trocken',
+                quantity: 80,
+                quantityNote: 'trocken',
                 nutrition: {
                     calories: 294,
                     protein: 11,
@@ -157,7 +160,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Tomaten',
-                quantity: '100 g',
+                quantity: 100,
                 nutrition: {
                     calories: 18,
                     protein: 1,
@@ -167,7 +170,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Gurke',
-                quantity: '100 g',
+                quantity: 100,
                 nutrition: {
                     calories: 12,
                     protein: 1,
@@ -177,7 +180,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Olivenöl',
-                quantity: '15 g',
+                quantity: 15,
                 nutrition: {
                     calories: 135,
                     protein: 0,
@@ -187,7 +190,7 @@ export const exampleMeals: readonly DiaryExampleMeal[] = [
             },
             {
                 name: 'Räuchertofu',
-                quantity: '200 g',
+                quantity: 200,
                 nutrition: {
                     calories: 340,
                     protein: 38,

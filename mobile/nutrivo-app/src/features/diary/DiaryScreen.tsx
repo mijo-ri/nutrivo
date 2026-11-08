@@ -10,11 +10,10 @@ import { Screen } from '@/shared/ui/Screen';
 import { DiaryDatePicker } from './DiaryDatePicker';
 import { DiaryMealCard } from './DiaryMealCard';
 import { DiarySummary } from './DiarySummary';
-import { exampleMeals, exampleTargets, sumNutrition } from './diaryExample';
+import { toDiaryDate } from './diary';
+import { exampleTargets, sumNutrition } from './diaryExample';
+import { useDiary } from './DiaryProvider';
 
-const total = sumNutrition(
-    exampleMeals.flatMap(meal => meal.entries.map(entry => entry.nutrition)),
-);
 const dateFormat = new Intl.DateTimeFormat('de-CH', {
     day: 'numeric',
     month: 'short',
@@ -28,6 +27,7 @@ const accessibleDateFormat = new Intl.DateTimeFormat('de-CH', { dateStyle: 'full
 
 export function DiaryScreen() {
     const isClient = useIsClient();
+    const { getDay } = useDiary();
     const [selectedDate, setSelectedDate] = useState(() => new Date());
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const dateButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
@@ -37,6 +37,9 @@ export function DiaryScreen() {
         return null;
     }
 
+    const date = toDiaryDate(selectedDate);
+    const meals = getDay(date);
+    const total = sumNutrition(meals.flatMap(meal => meal.entries.map(entry => entry.nutrition)));
     const isToday = selectedDate.toDateString() === new Date().toDateString();
     const dateLabel = isToday
         ? `Heute, ${dateFormat.format(selectedDate)}`
@@ -103,8 +106,8 @@ export function DiaryScreen() {
             )}
             <DiarySummary total={total} targets={exampleTargets} />
             <View style={styles.meals}>
-                {exampleMeals.map(meal => (
-                    <DiaryMealCard key={meal.id} meal={meal} />
+                {meals.map(meal => (
+                    <DiaryMealCard key={meal.id} meal={meal} date={date} />
                 ))}
             </View>
         </Screen>

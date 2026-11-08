@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { DiaryProvider } from '@/features/diary/DiaryProvider';
 import { FoodsProvider } from '@/features/foods/FoodsProvider';
 import { fontFamilies, theme } from '@/shared/theme/theme';
 
@@ -61,17 +62,20 @@ export default function RootLayout() {
             ) : (
                 <ThemeProvider value={navigationTheme}>
                     <FoodsProvider>
-                        <Stack
-                            screenOptions={{
-                                headerShown: false,
-                                contentStyle: { backgroundColor: theme.colors.background },
-                            }}
-                        >
-                            <Stack.Screen name="(tabs)" />
-                            <Stack.Screen name="food-selection" />
-                            <Stack.Screen name="food-create" />
-                            <Stack.Screen name="food-details" />
-                        </Stack>
+                        <DiaryProvider>
+                            <Stack
+                                screenOptions={{
+                                    headerShown: false,
+                                    contentStyle: { backgroundColor: theme.colors.background },
+                                }}
+                            >
+                                <Stack.Screen name="(tabs)" />
+                                <Stack.Screen name="food-selection" />
+                                <Stack.Screen name="diary-entry-create" />
+                                <Stack.Screen name="food-create" />
+                                <Stack.Screen name="food-details" />
+                            </Stack>
+                        </DiaryProvider>
                     </FoodsProvider>
                 </ThemeProvider>
             )}

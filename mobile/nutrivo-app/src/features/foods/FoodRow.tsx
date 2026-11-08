@@ -5,7 +5,7 @@ import { AppText } from '@/shared/ui/AppText';
 
 import { type Food, formatFoodNumber, formatFoodQuantity } from './food';
 
-export function FoodRow({ food, onPress }: { food: Food; onPress?: () => void }) {
+export function FoodRow({ food, onPress, accessibilityHint = 'Lebensmitteldetails anzeigen' }: { food: Food; onPress?: () => void; accessibilityHint?: string }) {
     const { width, fontScale } = useWindowDimensions();
     const stacked = width < 360 || fontScale > 1.2;
     const calories = formatFoodNumber(food.kilocalories);
@@ -29,7 +29,7 @@ export function FoodRow({ food, onPress }: { food: Food; onPress?: () => void })
             onPress={onPress}
             accessibilityRole="button"
             accessibilityLabel={label}
-            accessibilityHint="Lebensmitteldetails anzeigen"
+            accessibilityHint={accessibilityHint}
             style={({ pressed }) => [styles.row, stacked && styles.stacked, pressed && styles.pressed]}
         >
             {content}

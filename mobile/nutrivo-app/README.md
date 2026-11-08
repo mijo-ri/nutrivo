@@ -2,8 +2,8 @@
 
 React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
 header and bottom tabs for the diary, foods and nutrition targets. The diary
-shows a design preview with example meals and daily nutrition totals. Its add
-buttons open a searchable food catalogue. The foods tab supports searching, viewing
+supports adding foods by direct quantity or serving count, with per-day entries
+and live meal/day nutrition totals. Its add buttons open a searchable food catalogue. The foods tab supports searching, viewing
 and creating foods with nutrition and serving sizes; targets remains a placeholder.
 The app does not fetch nutrition data or require the API or PostgreSQL to be running.
 
@@ -64,9 +64,9 @@ The primary development workflow is Expo Go on a physical phone.
 
 ```text
 src/
-  app/                  Root stack with food selection, creation and details
+  app/                  Root stack with food selection, diary entry creation and food management
     (tabs)/             Tabs: /, /foods and /targets
-  features/diary/       Diary screen
+  features/diary/       Diary screen, session state and entry creation
   features/foods/       Food catalogue, session state, search, creation and details
   features/targets/     Nutrition targets placeholder screen
   shared/
@@ -83,7 +83,7 @@ without runtime requests to Google Fonts. Text retains native font scaling.
 Numeric text styles use tabular figures.
 
 The root layout uses an Expo Router stack. Its `(tabs)` group contains JavaScript
-tabs with a shared `AppHeader`; `/food-selection`, `/food-create` and `/food-details`
+tabs with a shared `AppHeader`; `/food-selection`, `/diary-entry-create`, `/food-create` and `/food-details`
 open above them without a tab bar.
 The header shows Nutrivo above the current page title and a circular profile
 icon. The profile is labelled for screen readers and has no action yet. The
@@ -103,16 +103,17 @@ Foods (`/foods`) opens the catalogue; targets (`/targets`) is a placeholder.
 Direct URLs work in the web preview. No backend client or authentication is
 included.
 
-### Diary design preview
+### Local diary
 
 The diary uses local, typed example snapshots in `src/features/diary/`. These
-illustrative values already describe the consumed portions; they are not a
-food database or production nutrition calculations. It runs without the API or database.
+illustrative values already describe consumed quantities and seed only the local
+calendar date when the app starts. Other dates start empty. New entries and totals
+are held by `DiaryProvider` above the router stack. It runs without the API or database.
 
 The selected date starts at today in the device's local timezone. The day arrows
 move one local calendar day backward or forward, including future days. Today is
 labelled “Heute”; other dates show the short weekday, day and month in `de-CH`.
-The example entries, totals and targets stay the same for every selected date.
+Entries and totals belong to the selected date; example targets are shared across days.
 Reloading resets the selected date to today. Tap the central date button to
 select a date directly: Android opens its system date dialog; iOS shows a native
 monthly calendar with “Abbrechen” and “Übernehmen”. The web preview uses a labelled
@@ -126,8 +127,8 @@ The native picker uses `@react-native-community/datetimepicker`, installed throu
 `npx expo install` to match the Expo SDK and work in Expo Go. Its native imports
 are excluded from web through a platform-specific component. No custom native
 build is required. Add-entry buttons open food selection for their respective
-meal. Food rows are read-only. There is no persistent storage, editing of saved
-foods, barcode scanning or voice input.
+meal and selected date. Food rows open quantity entry. There is no persistent
+storage, editing/deletion of saved entries, barcode scanning or voice input.
 
 The four expanded meal cards contain breakfast (six entries), lunch (four),
 dinner labelled “Nachtessen” (five), and an empty snacks state. Rice and quinoa
@@ -147,10 +148,10 @@ names.
 
 ### Food selection preview
 
-Each meal's add button opens `/food-selection?meal=breakfast|lunch|dinner|snacks`
-using one of those four IDs. The full-screen header shows “Lebensmittel auswählen”
-and the meal name. Missing, repeated or unknown meal parameters show a general
-header. The back button returns to the previous screen, retaining diary scroll
+Each meal's add button opens `/food-selection?meal=breakfast|lunch|dinner|snacks&date=YYYY-MM-DD`
+using one of those four IDs and the selected local calendar date. The full-screen
+header shows “Lebensmittel auswählen”, the meal name and date. Missing, repeated
+or invalid meal/date parameters show an error and a return action to the diary. The back button returns to the previous screen, retaining diary scroll
 position; without navigation history it falls back to `/`. The root stack anchors
 direct links to the tabs so native Android Back can return there as well.
 
@@ -168,13 +169,62 @@ foods created during this app session, with their own reference quantities. Thes
 values are independent of consumed diary portions. Each row shows its name,
 optional brand and `de-CH` kcal with up to two fractional digits and an explicit
 reference quantity and unit. Rows stack their nutrition below the name on narrow
-screens or with large native text. They are read-only: no quantity entry, selection action, saving,
-network requests or changes to diary totals are included.
+screens or with large native text. Tapping a result opens quantity entry; the
+separate food catalogue continues to open read-only food details.
 
 For static web exports, `useIsClient` defers device-dependent diary content and
 the URL-dependent meal subtitle and food detail content until hydration. The
 static HTML and initial browser render therefore agree; native rendering and later client navigation
 show this content immediately.
+
+### Diary quantity entry
+
+Selecting a search result opens `/diary-entry-create?foodId=…&meal=…&date=YYYY-MM-DD`.
+The screen shows the food, optional brand, destination meal and date. The first
+serving is selected with count 1; foods without servings start with their reference
+quantity in g/ml. Direct entry remains available for every food, using only its
+reference unit. There is no automatic conversion between grams and milliliters.
+Switching to a different option resets its amount to 1 serving or the reference quantity.
+
+Portion counts multiply the **entire** defined portion: 1.5 × (2 EL = 30 ml)
+means 45 ml. Fractional counts and amounts accept decimal commas or points.
+The preview and save path share validation and calculate each nutrient as
+`reference nutrient × consumed quantity / reference quantity`. Values are stored
+without display rounding; the preview shows up to two decimals and the diary
+retains its whole-number nutrition display. Quantity labels preserve small amounts.
+Empty, non-positive, malformed and non-finite quantities/results prevent saving.
+
+“Hinzufügen” adds one snapshot entry and returns to the existing search, retaining
+its query and scroll position. A brief status message names the added food and
+is announced to assistive technology. Rapid repeated taps do not duplicate a save;
+consciously logging a food again creates a separate entry. Back/“Abbrechen” discards
+the draft. Missing, repeated or invalid route parameters and unknown foods block
+logging and offer a return to the diary. Selection from valid direct links works
+without prior navigation, returning to food selection after save.
+
+Only the selected date and meal receive the entry; their totals update immediately.
+`DiaryProvider` owns session entries; no API request or persistent storage is used.
+Reload/restart resets the catalogue, diary examples, user entries and selected date.
+Backend rules remain authoritative when API integration is introduced.
+
+Quantity entry acceptance checks:
+
+1. Add foods to all four meals on today, a past day and a future day. Verify date
+   and meal in both screens and ensure entries never appear on another day.
+2. Select oats, change serving size, log 1.5 portions, then log 75 g directly.
+   Check both entries remain separate and totals use unrounded nutrients.
+3. Select water (no servings): only direct ml entry is offered and zero nutrients
+   can be saved. Check fractional amounts and decimal commas/points.
+4. Create a food with reference 30 g or 250 ml and several portions, including
+   “2 EL = 30 ml”. Log 1.5 of that portion: 45 ml; with 40 kcal/100 ml, expect 18 kcal.
+5. Try empty, zero, negative, incomplete, non-numeric and overflowing amounts.
+   Verify inline errors, retained input, unavailable preview and disabled save.
+6. Save with a double tap: only one entry is added. Verify search/scroll retention,
+   the brief confirmation, cancel/back without saving and date navigation.
+7. Open the creation URL with missing, repeated, invalid or unknown food/meal/date
+   parameters. Check the error and diary return. Reload to verify session reset.
+8. Check keyboard-only operation, 320/390-point widths, landscape, increased text
+   and VoiceOver/TalkBack, including selection state and success announcement.
 
 ### Food management preview
 
@@ -209,7 +259,8 @@ detail IDs show a not-found message and a link to the catalogue.
 and state. New foods are available immediately in the foods tab and diary search.
 Switching screens retains them; restarting or reloading resets to the examples.
 A direct link to a session-created food after reload therefore shows not found.
-Diary search rows remain read-only and diary snapshots/totals are unaffected.
+Diary search can log these foods immediately; saved diary entries hold independent
+food and serving snapshots and unrounded consumed nutrients.
 There is no backend integration, persistent storage, editing or deletion of saved
 foods, and no new dependencies.
 
@@ -232,7 +283,8 @@ Food management acceptance checks:
    Change the reference unit and check all equivalent labels follow it.
 6. Cancel a filled form and reopen; defaults must return without an added food.
    After saving, return to foods, switch to diary and find the new food by name
-   and brand. Diary search must still start empty and totals must stay unchanged.
+   and brand. Diary search must start empty; logging the new food must update only
+   the chosen date and meal.
 7. Load `/food-create`, `/food-details?id=apple`, `/food-details`, an unknown ID
    and repeated IDs directly; verify the appropriate screen and return to foods.
    Reload a local food's detail URL; verify not found and the reset catalogue.
@@ -256,8 +308,8 @@ npx expo export --platform web --output-dir dist/web
 
 Exports verify bundling and bundled assets; they do not produce installable
 native apps. Generated exports, Metro state and dependencies are ignored by Git.
-Additional test libraries and CI are deferred; validate this navigation slice
-with linting, type checks, exports and the manual checks below.
+Automated frontend tests and CI are deferred; validate with linting, type checks,
+exports and the manual checks below.
 
 ### Dependency audit
 
@@ -302,8 +354,8 @@ Diary acceptance checks:
    add-entry button must be reachable above the tabs.
 5. Navigate backward, forward beyond today, and back to today. Verify the “Heute”
    label only appears for today, with short weekdays for other dates. Tap rapidly
-   and confirm each tap moves one calendar day. Entries, totals and targets must
-   remain unchanged. Reload and confirm the selected date resets to today.
+   and confirm each tap moves one calendar day. Only today has seeded examples;
+   other days start empty. Reload and confirm the date resets to today.
 6. Check month and year boundaries, February 29 in a leap year, and local daylight
    saving transitions. Each tap must move exactly one local calendar day.
 7. Verify both arrows are enabled, named “Vorheriger Tag” and “Nächster Tag”, and
@@ -314,7 +366,7 @@ Diary acceptance checks:
    it starts at the selected diary day. Select a different past or future day and
    confirm; verify the label, then navigate with both arrows. Repeat for a month
    boundary, year boundary, February 29, and the local daylight saving changes.
-   Entries, totals and targets must remain unchanged.
+   Entries and totals must match the confirmed date; example targets stay fixed.
 9. Change the draft selection and cancel. Reopen and verify the original diary
    date is still selected. On Android, also cancel with the system Back button.
    Rapid taps and repeated opening/closing must not stack dialogs. Navigate away
@@ -387,11 +439,11 @@ Food selection acceptance checks:
 5. At 320- and 390-point widths, landscape and larger font sizes, verify no
    horizontal overflow, accessible touch targets and readable text. With the
    native keyboard open, ensure results can scroll while the search stays fixed.
-6. Check VoiceOver/TalkBack labels, focus indication on the input and read-only
+6. Check VoiceOver/TalkBack labels, focus indication on the input and selectable
    food announcements with kcal and reference unit.
-7. Load and reload `/food-selection`, a valid meal link and
-   `/food-selection?meal=invalid` directly. Verify the generic or meal header and
-   back navigation. Confirm `/`, `/foods` and `/targets` still work directly.
+7. Load and reload `/food-selection`, a valid meal/date link and
+   `/food-selection?meal=invalid` directly. Invalid context must prevent logging
+   and offer a return to the diary. Confirm `/`, `/foods` and `/targets` still work directly.
 
 Food selection validation on 2026-11-05:
 
@@ -429,3 +481,23 @@ Food management validation on 2026-11-07:
   its checked state; validation errors are associated with their input fields.
 - Physical-device safe areas, native keyboard avoidance, native large text,
   VoiceOver/TalkBack, Android hardware Back and browser zoom remain manual checks.
+
+Diary quantity-entry validation on 2026-11-08:
+
+- Strict TypeScript, lint and production exports for iOS, Android and Web passed.
+- Browser checks covered all four meals, today/past/future date isolation,
+  fractional servings, direct g/ml, zero nutrients, multiple portion options,
+  invalid input, cancellation, repeated bookings and a double-click save.
+  Search text survived saving and cancelling; meal/day totals updated correctly.
+- A session-created food with reference 250 ml and 100 kcal, with a portion
+  “2 EL = 30 ml”, yielded 45 ml and 18 kcal for 1.5 portions.
+- Quantity entry was checked at 320 × 568, 390 × 844 and 844 × 390, with wrapping,
+  scrolling and reachable actions. Measured page width matched the viewport at
+  320 and 844 pixels. Keyboard checks covered Tab, Space, arrows and Enter.
+- Unknown foods and repeated meal parameters blocked logging. A valid direct
+  creation link saved successfully and showed its confirmation in food selection.
+  A fresh app start produced no browser warnings/errors; reload reset entries
+  and totals to the example day.
+- Native runtime/device tests were unavailable (`xcrun simctl` is not installed).
+  Physical-device safe areas, keyboard avoidance, native large text, browser zoom,
+  VoiceOver/TalkBack and Android hardware Back remain manual checks.

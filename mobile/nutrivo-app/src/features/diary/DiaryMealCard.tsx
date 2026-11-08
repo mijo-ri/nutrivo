@@ -5,14 +5,11 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-import {
-    formatNutrition,
-    sumNutrition,
-    type DiaryExampleMeal,
-} from './diaryExample';
+import { type DiaryMeal, formatDiaryQuantity } from './diary';
+import { formatNutrition, sumNutrition } from './diaryExample';
 import { type MealId } from './diaryMeals';
 
-export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
+export function DiaryMealCard({ meal, date }: { meal: DiaryMeal; date: string }) {
     const { width, fontScale } = useWindowDimensions();
     const compactAction = width < 360 || fontScale > 1.2;
     const nutrition = sumNutrition(
@@ -67,21 +64,21 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                             tone="secondary"
                             style={styles.centered}
                         >
-                            Zwischenmahlzeiten oder Shakes hier erfassen
+                            Füge ein Lebensmittel zu dieser Mahlzeit hinzu
                         </AppText>
                     </View>
                 </View>
             ) : meal.entries.map((entry, index) => (
                 <View
-                    key={entry.name}
+                    key={entry.id}
                     accessible
-                    accessibilityLabel={`${entry.name}, ${entry.quantity}, ${formatNutrition(entry.nutrition.calories)} Kilokalorien`}
+                    accessibilityLabel={`${entry.food.name}, ${formatDiaryQuantity(entry)}, ${formatNutrition(entry.nutrition.calories)} Kilokalorien`}
                     style={[styles.entry, index % 2 === 1 && styles.alternateEntry]}
                 >
                     <View style={styles.food}>
-                        <AppText>{entry.name}</AppText>
+                        <AppText>{entry.food.name}</AppText>
                         <AppText variant="bodySm" tone="secondary" style={styles.quantity}>
-                            {entry.quantity}
+                            {formatDiaryQuantity(entry)}
                         </AppText>
                     </View>
                     <AppText variant="numericSm" style={styles.calories}>
@@ -90,7 +87,7 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
                 </View>
             ))}
             <View style={styles.footer}>
-                <AddEntryButton mealId={meal.id} mealName={meal.name} compact={compactAction} />
+                <AddEntryButton mealId={meal.id} mealName={meal.name} date={date} compact={compactAction} />
             </View>
         </View>
     );
@@ -99,10 +96,12 @@ export function DiaryMealCard({ meal }: { meal: DiaryExampleMeal }) {
 function AddEntryButton({
     mealId,
     mealName,
+    date,
     compact = false,
 }: {
     mealId: MealId;
     mealName: string;
+    date: string;
     compact?: boolean;
 }) {
     const router = useRouter();
@@ -111,7 +110,7 @@ function AddEntryButton({
         <Pressable
             onPress={() => router.push({
                 pathname: '/food-selection',
-                params: { meal: mealId },
+                params: { meal: mealId, date },
             })}
             accessibilityRole="button"
             accessibilityLabel={`Eintrag zu ${mealName} hinzufügen`}

@@ -7,7 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-export function FoodPage({ title, children }: PropsWithChildren<{ title: string }>) {
+export function FoodPage({ title, children, onBack, backLabel = 'Zurück zu den Lebensmitteln' }: PropsWithChildren<{
+    title: string;
+    onBack?: () => void;
+    backLabel?: string;
+}>) {
     const router = useRouter();
 
     return (
@@ -15,9 +19,9 @@ export function FoodPage({ title, children }: PropsWithChildren<{ title: string 
             <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <View style={styles.header}>
                     <Pressable
-                        onPress={() => router.dismissTo('/foods')}
+                        onPress={onBack ?? (() => router.dismissTo('/foods'))}
                         accessibilityRole="button"
-                        accessibilityLabel="Zurück zu den Lebensmitteln"
+                        accessibilityLabel={backLabel}
                         style={({ pressed }) => [styles.back, pressed && styles.pressed]}
                     >
                         <MaterialDesignIcons name="arrow-left" size={24} color={theme.colors.primary} accessible={false} aria-hidden />
