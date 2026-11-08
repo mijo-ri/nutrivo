@@ -2,15 +2,18 @@
 
 A calorie and nutrition tracking app built with .NET 10, DDD and Clean Architecture.
 The current backend supports food creation (`POST /foods`), paginated food search
-(`GET /foods`), diary logging (`POST /diary-entries`) and daily diary reads
+(`GET /foods`), food details (`GET /foods/{id}`), diary logging (`POST /diary-entries`) and daily diary reads
 (`GET /diary-entries?date=yyyy-MM-dd`) with daily and meal nutrition totals,
 backed by PostgreSQL.
 
 ## Mobile app
 
 The Expo/React Native app lives in [`mobile/nutrivo-app`](mobile/nutrivo-app).
-It currently provides the navigation shell, a dark theme based on the Stitch
-export and a diary introduction screen. It can run independently of the API.
+It provides the navigation shell, a dark theme based on the Stitch export, a local
+diary and backend-connected food search, details and creation. Food selection in
+the diary uses the backend catalogue, while diary entries remain local. Food
+editing/deletion is disabled until the backend supports it. Foods require the API
+and PostgreSQL; the diary example can still be viewed independently.
 See the [mobile setup and validation guide](mobile/nutrivo-app/README.md) for
 Expo Go instructions, scripts and the device checklist.
 
@@ -115,8 +118,8 @@ curl --fail-with-body http://localhost:5097/foods \
 ```
 
 The response is `201 Created` with `{ "id": "<uuid>" }` after the food has been
-committed to PostgreSQL. No Location header is returned because a Food detail
-endpoint is not available yet.
+committed to PostgreSQL. The response body remains ID-only and no Location header is returned.
+Retrieve saved details with `GET /foods/{id}`.
 
 `referenceUnit` is `1` for grams or `2` for milliliters. `referenceQuantity` is
 required and may be any positive decimal. The four nutritional values refer to
@@ -209,6 +212,27 @@ Invalid page values or offset overflow return `400 Problem Details` with code
 Malformed numeric parameters also return `400 Problem Details` through request
 binding. Technical storage failures return a generic `500` without internal
 details. Search requires no authentication and does not change stored foods.
+
+### Food details and mobile connectivity
+
+`GET /foods/{id}` returns a single food in the same shape as a search item,
+including persisted serving IDs and input ordering. Basis nutrition is exact;
+serving nutrition uses the same two-decimal rounding as search. Invalid GUIDs or
+an empty GUID return `400 Problem Details`; an unknown ID returns `404` with code
+`GetFoodById.NotFound`. Reads do not track or mutate entities.
+
+For Expo Go, bind the development API to the LAN and configure the mobile app's
+`EXPO_PUBLIC_API_URL` with the computer's LAN address:
+
+```sh
+dotnet run --project src/Nutrivo.Api --launch-profile http --urls http://0.0.0.0:5097
+```
+
+Development permits HTTP and allows Web origins `http://localhost:8081` and
+`http://127.0.0.1:8081` through CORS. Additional exact origins can be configured
+under `Cors:AllowedOrigins`; HTTPS redirection remains enabled outside Development.
+See the [mobile connection guide](mobile/nutrivo-app/README.md#connect-the-api-expo-go-and-web)
+for `.env.local`, device addressing, CORS overrides and manual acceptance checks.
 
 ### 7. Read a diary day
 

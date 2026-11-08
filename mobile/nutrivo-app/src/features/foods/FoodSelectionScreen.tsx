@@ -19,11 +19,11 @@ import { useIsClient } from '@/shared/hooks/useIsClient';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-import { searchFoods } from './food';
 import { FoodButton } from './FoodButton';
 import { FoodRow } from './FoodRow';
 import { FoodSearchInput } from './FoodSearchInput';
-import { useFoods } from './FoodsProvider';
+import { FoodQueryFeedback } from './FoodQueryFeedback';
+import { useFoodSearch } from './foodsQueries';
 
 const dateFormat = new Intl.DateTimeFormat('de-CH', { dateStyle: 'long' });
 
@@ -37,9 +37,8 @@ export function FoodSelectionScreen() {
     const [search, setSearch] = useState('');
     const [confirmation, setConfirmation] = useState('');
     const { lastAddedEntry, claimConfirmation } = useDiary();
-    const { foods: catalogue } = useFoods();
     const hasQuery = search.trim().length > 0;
-    const foods = hasQuery ? searchFoods(catalogue, search) : [];
+    const query = useFoodSearch(search, hasQuery && validContext);
 
     useFocusEffect(useCallback(() => {
         if (!lastAddedEntry || lastAddedEntry.date !== date || lastAddedEntry.mealId !== meal
@@ -110,13 +109,15 @@ export function FoodSelectionScreen() {
                                 <FoodSearchInput value={search} onChangeText={setSearch} />
                                 <AppText tone="accent" accessibilityLiveRegion="polite" role="status">{confirmation}</AppText>
                                 <AppText tone="secondary" accessibilityLiveRegion="polite">
-                                    {hasQuery ? `${foods.length} Lebensmittel gefunden` : 'Suche nach Lebensmitteln oder Marken'}
+                                    {hasQuery ? (query.totalCount === undefined ? 'Lebensmittel suchen' : `${query.totalCount} Lebensmittel gefunden`) : 'Suche nach Lebensmitteln oder Marken'}
                                 </AppText>
                             </View>
                             <FlatList
                                 style={styles.list}
                                 contentContainerStyle={styles.listContent}
-                                data={foods}
+                                data={query.foods}
+                                onEndReached={query.loadMore}
+                                onEndReachedThreshold={0.4}
                                 keyExtractor={food => food.id}
                                 keyboardShouldPersistTaps="handled"
                                 keyboardDismissMode="on-drag"
@@ -130,7 +131,9 @@ export function FoodSelectionScreen() {
                                         }) : undefined}
                                     />
                                 )}
-                                ListEmptyComponent={
+                                ListHeaderComponent={<FoodQueryFeedback loading={query.loading} error={query.error} onRetry={query.retry} />}
+                                ListFooterComponent={<FoodQueryFeedback loading={query.loadingMore} error={query.moreError} onRetry={query.retry} />}
+                                ListEmptyComponent={!query.loading && !query.error ? (
                                     <View style={styles.empty}>
                                         <View style={styles.emptyIcon}>
                                             <MaterialDesignIcons
@@ -150,7 +153,7 @@ export function FoodSelectionScreen() {
                                                 : 'Gib einen Namen oder eine Marke in das Suchfeld ein.'}
                                         </AppText>
                                     </View>
-                                }
+                                ) : undefined}
                             />
                         </>
                     )}

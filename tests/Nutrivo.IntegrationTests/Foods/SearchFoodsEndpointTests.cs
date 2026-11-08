@@ -76,7 +76,10 @@ public sealed class SearchFoodsEndpointTests(PostgreSqlFixture fixture)
 
         Assert.Equal(2, result.TotalCount);
         Assert.Equal(
-            new[] { brandMatch.Id.Value, nameMatch.Id.Value },
+            new[]
+            {
+                brandMatch.Id.Value, nameMatch.Id.Value
+            },
             result.Items.Select(item => item.Id)
         );
     }
@@ -114,11 +117,16 @@ public sealed class SearchFoodsEndpointTests(PostgreSqlFixture fixture)
         var nullBrand = CreateFood("oats");
         var lastBrand = CreateFood("OATS", "Zeta");
         var lastName = CreateFood("Zebra oats");
-        var duplicates = new[] { duplicateOne, duplicateTwo }
+        var duplicates = new[]
+            {
+                duplicateOne, duplicateTwo
+            }
             .OrderBy(food => food.Id.Value)
             .ToArray();
         var expected = new[]
-            { nullBrand, duplicates[0], duplicates[1], lastBrand, lastName };
+        {
+            nullBrand, duplicates[0], duplicates[1], lastBrand, lastName
+        };
         var options = await CreateDatabaseAsync(
             lastName,
             lastBrand,
@@ -396,6 +404,14 @@ public sealed class SearchFoodsEndpointTests(PostgreSqlFixture fixture)
 
     private sealed class FailingFoodQueries : IFoodQueries
     {
+        public Task<FoodReadModel?> GetByIdAsync(
+            Nutrivo.Domain.Foods.FoodId id,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new InvalidOperationException("secret-storage-details");
+        }
+
         public Task<SearchFoodsResult> SearchAsync(
             string? search,
             int page,

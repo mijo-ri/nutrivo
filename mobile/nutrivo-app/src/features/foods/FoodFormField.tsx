@@ -4,7 +4,7 @@ import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-export function FoodFormField({ label, value, onChangeText, error, numeric = false, placeholder, accessibilityLabel }: {
+export function FoodFormField({ label, value, onChangeText, error, numeric = false, placeholder, accessibilityLabel, disabled = false }: {
     label: string;
     value: string;
     onChangeText: (value: string) => void;
@@ -12,6 +12,7 @@ export function FoodFormField({ label, value, onChangeText, error, numeric = fal
     numeric?: boolean;
     placeholder?: string;
     accessibilityLabel?: string;
+    disabled?: boolean;
 }) {
     const [focused, setFocused] = useState(false);
     const errorId = useId();
@@ -21,6 +22,8 @@ export function FoodFormField({ label, value, onChangeText, error, numeric = fal
             <AppText>{label}</AppText>
             <TextInput
                 value={value}
+                editable={!disabled}
+                accessibilityState={{ disabled }}
                 onChangeText={onChangeText}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}

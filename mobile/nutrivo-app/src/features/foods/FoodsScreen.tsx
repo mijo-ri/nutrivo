@@ -6,17 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-import { searchFoods } from './food';
 import { FoodButton } from './FoodButton';
 import { FoodRow } from './FoodRow';
 import { FoodSearchInput } from './FoodSearchInput';
-import { useFoods } from './FoodsProvider';
+import { FoodQueryFeedback } from './FoodQueryFeedback';
+import { useFoodSearch } from './foodsQueries';
 
 export function FoodsScreen() {
     const router = useRouter();
-    const { foods } = useFoods();
     const [search, setSearch] = useState('');
-    const results = searchFoods(foods, search);
+    const query = useFoodSearch(search);
 
     return (
         <SafeAreaView edges={['left', 'right']} style={styles.screen}>
@@ -26,11 +25,13 @@ export function FoodsScreen() {
                         <FoodButton label="Lebensmittel hinzufügen" onPress={() => router.push('/food-create')} />
                         <FoodSearchInput value={search} onChangeText={setSearch} />
                         <AppText tone="secondary" accessibilityLiveRegion="polite">
-                            {results.length} Lebensmittel{search.trim() ? ' gefunden' : ''}
+                            {query.totalCount === undefined ? 'Lebensmittel suchen' : `${query.totalCount} Lebensmittel${search.trim() ? ' gefunden' : ''}`}
                         </AppText>
                     </View>
                     <FlatList
-                        data={results}
+                        data={query.foods}
+                        onEndReached={query.loadMore}
+                        onEndReachedThreshold={0.4}
                         keyExtractor={food => food.id}
                         style={styles.screen}
                         contentContainerStyle={styles.list}
@@ -39,12 +40,14 @@ export function FoodsScreen() {
                         renderItem={({ item }) => (
                             <FoodRow food={item} onPress={() => router.push({ pathname: '/food-details', params: { id: item.id } })} />
                         )}
-                        ListEmptyComponent={
+                        ListHeaderComponent={<FoodQueryFeedback loading={query.loading} error={query.error} onRetry={query.retry} />}
+                        ListFooterComponent={<FoodQueryFeedback loading={query.loadingMore} error={query.moreError} onRetry={query.retry} />}
+                        ListEmptyComponent={!query.loading && !query.error ? (
                             <View style={styles.empty}>
                                 <AppText variant="headlineMd">Keine Lebensmittel gefunden</AppText>
                                 <AppText tone="secondary">Versuche einen anderen Namen oder eine andere Marke.</AppText>
                             </View>
-                        }
+                        ) : undefined}
                     />
                 </View>
             </KeyboardAvoidingView>

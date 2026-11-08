@@ -4,9 +4,10 @@ React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
 header and bottom tabs for the diary, foods and nutrition targets. The diary
 supports adding foods by direct quantity or serving count, with per-day entries
 and live meal/day nutrition totals. Its add buttons open a searchable food catalogue.
-The foods tab supports searching, viewing, creating, editing and deleting foods
-with nutrition and serving sizes; targets remains a placeholder.
-The app does not fetch nutrition data or require the API or PostgreSQL to be running.
+The foods tab searches, displays and creates foods through the .NET API and PostgreSQL.
+The diary's food selection uses the same backend catalogue; diary entries and
+nutrition targets remain local examples/session state. Food editing and deletion
+are disabled until their backend endpoints are implemented.
 
 ## Run on your phone
 
@@ -22,6 +23,8 @@ cd mobile/nutrivo-app
 npm ci
 npm start
 ```
+
+Configure the API before opening the foods tab, following the next section.
 
 Keep the computer and phone on the same Wi-Fi network. `npm start` starts Metro
 in Expo Go mode and shows a QR code. Scan it with the iPhone Camera app or with
@@ -61,6 +64,51 @@ Run the commands below from `mobile/nutrivo-app`:
 The Android emulator requires Android Studio and an installed virtual device.
 The primary development workflow is Expo Go on a physical phone.
 
+## Connect the API (Expo Go and Web)
+
+Start PostgreSQL, configure the API connection and apply migrations as described
+in the [root README](../../README.md). In a separate terminal at the repository root:
+
+```sh
+dotnet run --project src/Nutrivo.Api --launch-profile http --urls http://0.0.0.0:5097
+```
+
+The API allows HTTP in Development so Expo Go does not need to trust a local
+HTTPS certificate. HTTPS redirection remains enabled in other environments.
+PostgreSQL stays bound to localhost; only the API needs to be reachable by the phone.
+
+In `mobile/nutrivo-app`, copy the example and set the address:
+
+```sh
+cp .env.example .env.local
+```
+
+For Expo Go on a physical phone, replace the example IP in `EXPO_PUBLIC_API_URL`
+with the computer's LAN address, for example `http://192.168.1.10:5097`. On a phone,
+`localhost` refers to the phone itself. Keep both devices on the same Wi-Fi and
+allow access to TCP port 5097 through the local firewall. For a browser or iOS
+simulator on the computer, use `http://localhost:5097`; Android emulators normally
+use `http://10.0.2.2:5097`.
+
+Expo embeds `EXPO_PUBLIC_API_URL` in the JavaScript bundle; it is public configuration,
+never a place for secrets. Fully reload the app after changing it; restart Metro
+if necessary. Missing or invalid configuration is shown as an error in the foods UI.
+There is no fallback to example foods or offline catalogue.
+
+For Web, run `npm run web -- --port 8081` and open `http://localhost:8081`.
+Development CORS permits `http://localhost:8081` and `http://127.0.0.1:8081`, with
+GET/POST and Content-Type preflight support. If using another port or a LAN-hosted
+web origin, configure the exact origin through API User Secrets or environment
+configuration, for example from the repository root:
+
+```sh
+dotnet user-secrets set 'Cors:AllowedOrigins:2' 'http://192.168.1.10:8081' --project src/Nutrivo.Api
+```
+
+Restart the API afterwards. Origins contain the scheme, host and port, without a
+trailing slash. Native Expo Go requests do not require a CORS origin. Development
+CORS is not enabled in Production.
+
 ## Structure and design
 
 ```text
@@ -68,7 +116,7 @@ src/
   app/                  Root stack with food selection, diary entry creation and food management
     (tabs)/             Tabs: /, /foods and /targets
   features/diary/       Diary screen, session state and entry creation
-  features/foods/       Food catalogue, session state, search and shared create/edit form
+  features/foods/       Backend food catalogue, query cache, search and creation form
   features/targets/     Nutrition targets placeholder screen
   shared/
     theme/              Typed colors, spacing, radii and typography
@@ -101,8 +149,8 @@ custom native build. Decorative icons are hidden from screen readers.
 
 The diary (`/`) is the initial tab and the Android back-navigation anchor.
 Foods (`/foods`) opens the catalogue; targets (`/targets`) is a placeholder.
-Direct URLs work in the web preview. No backend client or authentication is
-included.
+Direct URLs work in the web preview. Foods use a shared API client; authentication
+is not included.
 
 ### Local diary
 
@@ -147,7 +195,7 @@ a minimum visual size of 28 points and an 8-point touch-area extension on each
 side. On narrow displays they use an icon while retaining their full accessible
 names.
 
-### Food selection preview
+### Food selection
 
 Each meal's add button opens `/food-selection?meal=breakfast|lunch|dinner|snacks&date=YYYY-MM-DD`
 using one of those four IDs and the selected local calendar date. The full-screen
@@ -157,21 +205,18 @@ position; without navigation history it falls back to `/`. The root stack anchor
 direct links to the tabs so native Android Back can return there as well.
 
 The search field stays above a separately scrolling result list. It starts empty
-on each opening, with “Suche nach Lebensmitteln oder Marken” and no food rows.
-The keyboard opens only when the input is tapped. Local search trims outer
-whitespace and matches a contiguous substring of either name or brand,
-case-insensitively. Results sort by name and then brand using `de-CH` ordering.
-Clearing the field restores the initial hint; unmatched queries show
-“Keine Lebensmittel gefunden”.
+on each opening, with “Suche nach Lebensmitteln oder Marken” and no API request.
+The keyboard opens only when tapped. Searches trim outer whitespace and wait
+300 ms after typing. The backend matches a case-insensitive literal substring
+of name or brand and determines ordering. Each page contains up to 20 foods;
+scrolling loads further pages. The displayed count is the backend total, not the
+number of loaded rows. Clearing the query restores the initial hint.
 
-The shared, typed catalogue is seeded from `src/features/foods/foodExamples.ts`
-with illustrative macros, brands and portions per 100 g or 100 ml. It also includes
-foods created during this app session, with their own reference quantities. These
-values are independent of consumed diary portions. Each row shows its name,
-optional brand and `de-CH` kcal with up to two fractional digits and an explicit
-reference quantity and unit. Rows stack their nutrition below the name on narrow
-screens or with large native text. Tapping a result opens quantity entry; the
-separate food catalogue opens food details with edit and delete actions.
+Loading, no matches and request failures have distinct states. Failures offer
+“Erneut versuchen”; loaded rows remain visible when a later page fails.
+Old results are hidden as soon as the search changes. Each row shows its name,
+optional brand, kcal and explicit reference quantity/unit. Tapping a result opens
+quantity entry, which fetches the food by ID, including on direct links.
 
 For static web exports, `useIsClient` defers device-dependent diary content and
 the URL-dependent meal subtitle and food detail content until hydration. The
@@ -205,8 +250,9 @@ without prior navigation, returning to food selection after save.
 
 Only the selected date and meal receive the entry; their totals update immediately.
 `DiaryProvider` owns session entries; no API request or persistent storage is used.
-Reload/restart resets the catalogue, diary examples, user entries and selected date.
-Backend rules remain authoritative when API integration is introduced.
+Reload/restart resets diary examples, user entries and the selected date. The
+backend catalogue persists independently. Backend domain rules remain authoritative;
+the diary calculation is still a local preview until diary integration is implemented.
 
 Quantity entry acceptance checks:
 
@@ -227,115 +273,60 @@ Quantity entry acceptance checks:
 8. Check keyboard-only operation, 320/390-point widths, landscape, increased text
    and VoiceOver/TalkBack, including selection state and success announcement.
 
-### Food management preview
+### Food management
 
-`/foods` shows all foods alphabetically by name, then brand. The search matches
-name or brand substrings, ignoring surrounding whitespace and case. Clearing it
-shows the complete catalogue again. Tapping a row opens `/food-details?id=…`,
-showing the food, reference quantity, kcal, protein, carbohydrates, fat and each
-additional serving with its equivalent in the reference unit.
+`/foods` loads all backend foods, ordered by name/brand/ID. Search and pagination
+behave as described above, with an empty query listing all foods. Tapping a row
+opens `/food-details?id=<uuid>`, displaying the persisted reference quantity,
+exact basis nutrition formatted for display, and ordered serving sizes.
+Details are loaded through `GET /foods/{id}`, including after browser reload.
 
-“Lebensmittel hinzufügen” opens `/food-create`. Enter a name, an optional brand,
-a positive reference quantity (initially 100 g; g/ml selectable), and all four
-nonnegative nutrition values. Zero is a known value; empty nutrient fields are
-invalid. Decimal commas and decimal points are accepted; incomplete decimals,
-non-finite values and partially numeric text are rejected. Text fields accept up
-to 200 trimmed characters. Inputs are stored without display rounding. Nutrition
-displays use up to two fractional digits; quantity displays preserve small amounts
-such as 0.001 g instead of rounding them to zero.
+“Lebensmittel hinzufügen” opens `/food-create`. Enter a name, optional brand,
+positive reference quantity (initially 100 g; g/ml selectable), and all four
+nonnegative nutrients. Zero is valid; missing nutrients are not. Inputs accept
+decimal commas or points and are not rounded before submission. Text fields are
+limited to 200 trimmed characters. Optional servings need a positive quantity,
+free-text unit and positive equivalent in the reference unit; labels are optional.
+“2 EL = 30 ml” describes the entire two-spoon serving. No g/ml conversion occurs.
 
-Optional portions can be added and removed while drafting. Each requires a
-positive quantity, a free-text unit and a positive equivalent quantity in the
-food's g/ml reference unit; its label is optional. For example, “2 EL = 30 ml”
-means that the entire two-spoon portion equals 30 ml. Incomplete portion rows
-must be completed or removed before saving. Changing the reference unit changes
-the unit of all equivalents; no automatic g/ml conversion takes place.
+Saving sends `POST /foods`. Inputs and form actions are disabled while pending;
+rapid taps do not create repeated requests. POST is never automatically retried.
+Errors retain the draft and show German messages; known domain codes are translated.
+A network failure may occur after the server commits, so check the catalogue
+before manually repeating an uncertain save. After a successful POST, list caches
+are invalidated and navigation opens the new food's details. If detail loading fails,
+retrying only repeats GET, never POST. Backend food and serving IDs are authoritative.
 
-Saving validates every field, adds the food once and replaces the form with its
-details. The header back button returns to foods, including on direct links;
-“Abbrechen” or leaving the form discards the draft. Missing, repeated or unknown
-detail IDs show a not-found message and a link to the catalogue.
+“Bearbeiten” and “Löschen” remain visible but disabled with “Noch nicht verfügbar”.
+Direct `/food-edit` links show an unavailable notice and return to the catalogue.
+There are no local catalogue mutations. `FoodsProvider` owns a shared TanStack Query
+client; search and detail hooks use an in-memory cache with 30-second freshness.
+Screen re-entry, app foregrounding and browser focus refresh stale active queries.
+Read requests support cancellation and a 15-second timeout; transient read failures
+retry once, while HTTP 4xx responses do not retry automatically.
 
-“Bearbeiten” opens `/food-edit?id=…` with the shared creation form. All fields,
-including optional brand and portions, are populated without display rounding,
-grouping separators or scientific notation. “Änderungen speichern” updates the
-same food and returns to its details; cancel/header Back discards the draft and
-returns to details, also on direct links. Android hardware Back behaves the same.
-Existing portion IDs are retained; added portions receive fresh IDs. Changing the
-reference quantity or unit never rescales nutrition or portion equivalents.
-Missing, repeated or unknown edit IDs show the not-found state; updates never
-recreate a deleted food. All example foods can be edited or deleted.
+Food integration acceptance checks (Web and Expo Go):
 
-The red “Löschen” action opens a modal naming the food and explaining that existing
-diary entries remain unchanged. Only “Löschen” inside the modal removes the food
-and returns to the catalogue. “Abbrechen”, Escape on web and Android hardware
-Back close the modal without deleting. The modal confines keyboard focus and
-returns it to the delete action when cancelled.
-
-`FoodsProvider` holds the catalogue above the router stack using React Context
-and state. New foods are available immediately in the foods tab and diary search.
-Switching screens retains them; restarting or reloading resets to the examples.
-A direct link to a session-created food after reload therefore shows not found.
-Diary search can log these foods immediately; saved diary entries hold independent
-food and serving snapshots and unrounded consumed nutrients.
-Edits immediately appear in the catalogue and diary search; deleted foods disappear
-from both. Existing diary entries retain their names, brands, units, portions,
-nutrition and totals after catalogue edits or deletion. New entries use the latest
-catalogue values. There is no backend integration, persistent storage or new dependency.
-
-Food editing/deletion acceptance checks:
-
-1. Create a food, then edit every field, including g/ml, optional brand, zero
-   nutrients and several portions. Save, reopen and verify all values and ordering.
-   Check existing portions retain their identity and removed portions stay removed.
-2. Check decimal comma/point, small numbers such as 0.0000001 and values with more
-   than two decimal places: reopening must preserve the stored value. Invalid
-   fields and incomplete portions must block saving; rapid repeated saves must
-   not create another food. Changing a reference must not convert other values.
-3. Change a draft, then cancel or use header/Android Back. Details must retain the
-   original values. Open `/food-edit?id=milk` directly and verify save and cancel
-   both return to details without depending on prior navigation.
-4. Cancel deletion with the button, Escape and Android Back. Verify the food stays,
-   initial focus is inside the dialog, Tab/Shift+Tab stay inside, and focus returns
-   to the delete action. Confirm deletion and check both catalogue and diary search.
-5. Log a food, edit its name, nutrients, reference unit and portions, and log it
-   again. The first entry must retain its snapshot; the second must use new values.
-   Delete the food: both entries and all totals must remain unchanged.
-6. Open `/food-edit`, an unknown ID and repeated IDs directly. Verify the not-found
-   state and return to the catalogue. Reload a session-created food's edit link:
-   it must show not found, while example edits/deletions reset on reload.
-7. Check 320/390-point widths, landscape, large text, keyboard-only operation,
-   VoiceOver/TalkBack and native keyboard avoidance. Forms and dialogs must scroll
-   without horizontal overflow and all actions must stay reachable.
-
-Food management acceptance checks:
-
-1. Open foods: all 14 examples appear in name/brand order. Search
-   ` HaFeRfLoCkEn `, `ALPEN`, `flocken`, an unmatched term and whitespace.
-   Clear the query and verify the complete list returns.
-2. Open an apple, water and oat drink: check absent brands, zero values, all four
-   nutrients, g/ml and servings. Check the long tofu name wraps.
-3. Create a food with reference 30 g, decimals in both formats, zero macros,
-   optional brand and no portions. Save and check its details and catalogue row.
-   Repeat with a brand, 250 ml and multiple portions, including “2 EL = 30 ml”.
-4. Leave required fields empty; try negative/zero quantities, negative nutrients,
-   `1,`, `1.`, `12abc`, non-finite numbers and text over 200 characters. Saving
-   must show field errors and retain the draft without creating a food. Zero
-   nutrients and decimal quantities must work. Correct errors and save once.
-5. Add multiple portions, leave one incomplete and verify saving is blocked.
-   Remove it and save. Check remaining portions retain their order and values.
-   Change the reference unit and check all equivalent labels follow it.
-6. Cancel a filled form and reopen; defaults must return without an added food.
-   After saving, return to foods, switch to diary and find the new food by name
-   and brand. Diary search must start empty; logging the new food must update only
-   the chosen date and meal.
-7. Load `/food-create`, `/food-details?id=apple`, `/food-details`, an unknown ID
-   and repeated IDs directly; verify the appropriate screen and return to foods.
-   Reload a local food's detail URL; verify not found and the reset catalogue.
-8. Check 320- and 390-point widths, landscape, large text and browser zoom.
-   Forms and long details must scroll without horizontal overflow; all actions
-   must stay reachable with the native keyboard open. Check focus indication,
-   field/error labels and unit selection with VoiceOver/TalkBack and keyboard.
+1. With an empty database, verify an empty catalogue. Create foods through the UI
+   or Swagger, including more than 20 matches; check total count and scroll pagination.
+2. Search a name/brand with mixed case, surrounding whitespace, `%`, `_`, and a
+   nonexistent term. Change the search quickly and ensure old rows never replace
+   current results. Clear the search in the catalogue and diary selection.
+3. Create a gram food without a brand/servings and a milliliter food with zero
+   nutrients, decimal comma/point inputs and multiple servings. Check ordering,
+   generated IDs, catalogue search and direct detail links after a full app reload.
+4. Check required/invalid fields and incomplete servings. Trigger a backend
+   validation failure (for example a number beyond decimal range); retain all inputs.
+   Repeated taps during a slow save must send only one POST.
+5. Stop the API during first load, pagination and saving. Check error/retry states,
+   retained rows/drafts and recovery. Fail detail loading after a successful POST;
+   retry must not create another food. Verify missing API URL and unknown UUID states.
+6. Find a created food in diary selection and log direct amounts and fractional
+   servings. Only the selected local date/meal changes; reload resets diary entries
+   while the food remains stored. Open quantity entry directly with a valid food UUID.
+7. Confirm edit/delete cannot change food data and direct edit links are unavailable.
+8. Check 320/390-point widths, landscape, large text, keyboard operation and
+   VoiceOver/TalkBack. Forms/details must scroll without horizontal overflow.
 
 ## Validation
 
@@ -439,6 +430,34 @@ Date picker validation on 2026-11-07:
 - Native Expo Go, VoiceOver/TalkBack and native large-text checks remain manual:
   no simulator or connected physical device was available for this validation.
 
+### Food API integration validation on 2026-11-08
+
+- JetBrains CleanupCode completed for the changed C# files. The backend build
+  passed without warnings and all 409 tests passed (137 domain, 96 application,
+  176 integration), including the detail endpoint and development access tests.
+- Mobile lint, strict TypeScript and production exports for iOS, Android and Web
+  passed. No automated frontend test infrastructure was added.
+- Browser checks used a separate disposable PostgreSQL database and the real API.
+  They covered creating g/ml foods with and without brand/servings, decimal comma
+  and point inputs, zero nutrients, backend validation failures with retained drafts,
+  double-click save (exactly one persisted food), and details after full reload.
+- Searches covered case/whitespace, no matches and quick changes. A catalogue with
+  more than 20 foods loaded further pages by scrolling. Stopping the API before
+  page two preserved existing rows and showed a footer retry; restarting the API
+  and retrying loaded the missing results.
+- Diary selection found the newly created food and logged 1.5 servings locally.
+  Empty search showed its hint. Unknown detail IDs and direct edit links showed
+  their respective not-found/unavailable states; edit/delete buttons were disabled.
+- Detail layout was checked at 320 and 390 pixels without horizontal page overflow.
+  The browser reported no console warnings. Native Expo Go, hardware Back, keyboard
+  avoidance, large text and screen-reader checks require a physical device and
+  remain manual acceptance steps.
+
+### Historical validation before food API integration
+
+The dated records below describe earlier implementations, including the former
+local catalogue and edit/delete previews; they are not current acceptance criteria.
+
 Navigation slice validation on 2026-11-04:
 
 - Lint, strict TypeScript, Expo dependency validation and Expo Doctor (20/20)
@@ -472,14 +491,13 @@ Food selection acceptance checks:
 1. Open selection from all four meal buttons and verify the matching meal title,
    hidden tabs and empty initial search. Return using the header button and
    Android Back; the diary must retain its previous scroll position and totals.
-2. Search ` HaFeRfLoCkEn `: both oat examples must appear, sorted by brand. Search
-   `ALPEN`: name/brand matches must appear. Search `flocken`: both oats match.
+2. Create suitable foods through the API/UI, then search their names and brands
+   with mixed case and surrounding whitespace. Check backend ordering and pagination.
    A query containing only spaces must show the initial hint.
 3. Search `xyznotfound`: verify the no-results message. Clear the search, then
    return to the diary and reopen: both paths must restore an empty search.
-4. Search `Apfel`, `Milch` and `Wasser`: verify absent brands are omitted, gram
-   and milliliter labels are correct, and zero kcal is displayed. Search
-   `Räuchertofu` to check wrapping of the long name and brand.
+4. Search stored gram/milliliter foods, including zero nutrients, absent brands
+   and a long name; verify units, omitted brands and wrapping.
 5. At 320- and 390-point widths, landscape and larger font sizes, verify no
    horizontal overflow, accessible touch targets and readable text. With the
    native keyboard open, ensure results can scroll while the search stays fixed.

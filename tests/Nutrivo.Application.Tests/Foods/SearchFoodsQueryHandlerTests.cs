@@ -89,7 +89,12 @@ public sealed class SearchFoodsQueryHandlerTests
     {
         var failure = new InvalidOperationException("Storage unavailable.");
         var handler =
-            new SearchFoodsQueryHandler(new RecordingFoodQueries { Failure = failure });
+            new SearchFoodsQueryHandler(
+                new RecordingFoodQueries
+                {
+                    Failure = failure
+                }
+            );
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.HandleAsync(new SearchFoodsQuery(), CancellationToken.None)
@@ -112,6 +117,14 @@ public sealed class SearchFoodsQueryHandlerTests
 
     private sealed class RecordingFoodQueries : IFoodQueries
     {
+        public Task<FoodReadModel?> GetByIdAsync(
+            Nutrivo.Domain.Foods.FoodId id,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+
         public List<(string? Search, int Page, int PageSize, CancellationToken Token)>
             Calls { get; } = [];
 

@@ -17,6 +17,19 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpoints();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+            .WithOrigins(
+                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                ?? []
+            )
+            .WithMethods("GET", "POST")
+            .WithHeaders("Content-Type")
+        )
+    );
+}
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -25,13 +38,18 @@ app.UseStatusCodePages();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseCors();
     app.MapOpenApi();
     app.UseSwaggerUI(options =>
         options.SwaggerEndpoint("/openapi/v1.json", "Nutrivo API v1")
     );
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.MapEndpoints();
 
 app.Run();

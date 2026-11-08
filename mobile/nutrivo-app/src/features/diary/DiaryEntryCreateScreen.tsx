@@ -6,7 +6,8 @@ import { type Food, formatFoodNumber, formatFoodQuantity } from '@/features/food
 import { FoodButton } from '@/features/foods/FoodButton';
 import { FoodFormField } from '@/features/foods/FoodFormField';
 import { FoodPage } from '@/features/foods/FoodPage';
-import { useFoods } from '@/features/foods/FoodsProvider';
+import { useFood } from '@/features/foods/foodsQueries';
+import { FoodQueryFeedback } from '@/features/foods/FoodQueryFeedback';
 import { useIsClient } from '@/shared/hooks/useIsClient';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
@@ -25,10 +26,11 @@ export function DiaryEntryCreateScreen() {
         date?: string | string[];
     }>();
     const router = useRouter();
-    const { foods } = useFoods();
     const isClient = useIsClient();
-    const food = typeof foodId === 'string' ? foods.find(item => item.id === foodId) : undefined;
     const parsedDate = parseDiaryDate(date);
+    const validContext = isMealId(meal) && typeof date === 'string' && !!parsedDate;
+    const query = useFood(foodId, validContext);
+    const food = query.data;
     const valid = food && isMealId(meal) && typeof date === 'string' && parsedDate;
 
     function goBack() {
@@ -41,6 +43,9 @@ export function DiaryEntryCreateScreen() {
 
     return (
         <FoodPage title="Menge erfassen" onBack={goBack} backLabel="Zurück ohne Hinzufügen">
+            {isClient && validContext && !query.invalidId && (
+                <FoodQueryFeedback loading={query.isPending} error={query.error} onRetry={query.refetch} />
+            )}
             {isClient && (valid ? (
                 <EntryForm
                     key={`${food.id}-${meal}-${date}`}
@@ -51,7 +56,7 @@ export function DiaryEntryCreateScreen() {
                     onCancel={goBack}
                     onAdded={() => router.dismissTo({ pathname: '/food-selection', params: { meal, date } })}
                 />
-            ) : (
+            ) : !validContext || query.invalidId ? (
                 <Card>
                     <AppText variant="headlineMd" accessibilityRole="header">Eintrag nicht möglich</AppText>
                     <AppText tone="secondary">
@@ -59,7 +64,7 @@ export function DiaryEntryCreateScreen() {
                     </AppText>
                     <FoodButton label="Zum Tagebuch" onPress={() => router.dismissTo('/')} />
                 </Card>
-            ))}
+            ) : null)}
         </FoodPage>
     );
 }

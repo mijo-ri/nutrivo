@@ -38,43 +38,10 @@ internal sealed class FoodQueries(NutrivoDbContext context) : IFoodQueries
             .ThenBy(food => food.Id)
             .Skip(offset)
             .Take(pageSize)
-            .Select(food => new
-                {
-                    food.Id,
-                    food.Name,
-                    food.Brand,
-                    food.ReferenceQuantity,
-                    food.ReferenceUnit,
-                    food.NutritionalValues,
-                    ServingSizes = food
-                        .ServingSizes.OrderBy(serving => serving.Position)
-                        .ToList()
-                }
-            )
+            .Select(Projection)
             .ToListAsync(cancellationToken);
 
-        var items = rows
-            .Select(food => new FoodSearchItem(
-                    food.Id.Value,
-                    food.Name,
-                    food.Brand,
-                    food.ReferenceQuantity,
-                    food.ReferenceUnit,
-                    food.NutritionalValues.Kilocalories,
-                    food.NutritionalValues.ProteinGrams,
-                    food.NutritionalValues.CarbohydratesGrams,
-                    food.NutritionalValues.FatGrams,
-                    food
-                        .ServingSizes.Select(serving => MapServing(
-                                serving,
-                                food.NutritionalValues,
-                                food.ReferenceQuantity
-                            )
-                        )
-                        .ToImmutableArray()
-                )
-            )
-            .ToImmutableArray();
+        var items = rows.Select(MapFood).ToImmutableArray();
 
         return new SearchFoodsResult(
             items,
@@ -84,14 +51,72 @@ internal sealed class FoodQueries(NutrivoDbContext context) : IFoodQueries
         );
     }
 
-    private static ServingSizeSearchItem MapServing(
+    public async Task<FoodReadModel?> GetByIdAsync(
+        FoodId id,
+        CancellationToken cancellationToken
+    )
+    {
+        var row = await context
+            .Foods.AsNoTracking()
+            .Where(food => food.Id == id)
+            .Select(Projection)
+            .SingleOrDefaultAsync(cancellationToken);
+        return row is null ? null : MapFood(row);
+    }
+
+    private sealed record FoodRow(
+        FoodId Id,
+        string Name,
+        string? Brand,
+        decimal ReferenceQuantity,
+        ReferenceUnit ReferenceUnit,
+        NutritionalValues NutritionalValues,
+        List<ServingSize> ServingSizes
+    );
+
+    private static readonly System.Linq.Expressions.Expression<Func<Food, FoodRow>>
+        Projection =
+            food => new FoodRow(
+                food.Id,
+                food.Name,
+                food.Brand,
+                food.ReferenceQuantity,
+                food.ReferenceUnit,
+                food.NutritionalValues,
+                food.ServingSizes.OrderBy(serving => serving.Position).ToList()
+            );
+
+    private static FoodReadModel MapFood(FoodRow food)
+    {
+        return new FoodReadModel(
+            food.Id.Value,
+            food.Name,
+            food.Brand,
+            food.ReferenceQuantity,
+            food.ReferenceUnit,
+            food.NutritionalValues.Kilocalories,
+            food.NutritionalValues.ProteinGrams,
+            food.NutritionalValues.CarbohydratesGrams,
+            food.NutritionalValues.FatGrams,
+            food
+                .ServingSizes.Select(serving => MapServing(
+                        serving,
+                        food.NutritionalValues,
+                        food.ReferenceQuantity
+                    )
+                )
+                .ToImmutableArray()
+        );
+    }
+
+    private static ServingSizeReadModel MapServing(
         ServingSize serving,
         NutritionalValues basis,
         decimal referenceQuantity
     )
     {
         var nutrition = basis.Scale(serving.EquivalentQuantity, referenceQuantity).Value;
-        return new ServingSizeSearchItem(
+        return new ServingSizeReadModel(
             serving.Id.Value,
             serving.Quantity,
             serving.Unit,

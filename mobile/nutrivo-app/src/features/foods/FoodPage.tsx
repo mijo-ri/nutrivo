@@ -7,10 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-export function FoodPage({ title, children, onBack, backLabel = 'Zurück zu den Lebensmitteln' }: PropsWithChildren<{
+export function FoodPage({ title, children, onBack, backLabel = 'Zurück zu den Lebensmitteln', backDisabled = false }: PropsWithChildren<{
     title: string;
     onBack?: () => void;
     backLabel?: string;
+    backDisabled?: boolean;
 }>) {
     const router = useRouter();
 
@@ -20,6 +21,8 @@ export function FoodPage({ title, children, onBack, backLabel = 'Zurück zu den 
                 <View style={styles.header}>
                     <Pressable
                         onPress={onBack ?? (() => router.dismissTo('/foods'))}
+                        disabled={backDisabled}
+                        accessibilityState={{ disabled: backDisabled }}
                         accessibilityRole="button"
                         accessibilityLabel={backLabel}
                         style={({ pressed }) => [styles.back, pressed && styles.pressed]}

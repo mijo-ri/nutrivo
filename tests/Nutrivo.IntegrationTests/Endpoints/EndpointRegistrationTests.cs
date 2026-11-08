@@ -8,6 +8,7 @@ using Nutrivo.Api.Endpoints;
 using Nutrivo.Api.Endpoints.Diaries.GetDiaryDay;
 using Nutrivo.Api.Endpoints.Diaries.LogFood;
 using Nutrivo.Api.Endpoints.Foods.CreateFood;
+using Nutrivo.Api.Endpoints.Foods.GetFoodById;
 using Nutrivo.Api.Endpoints.Foods.SearchFoods;
 using Nutrivo.Application.Foods;
 using Nutrivo.Domain.Foods;
@@ -34,7 +35,8 @@ public sealed class EndpointRegistrationTests
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.Equal(4, endpoints.Length);
+        Assert.Equal(5, endpoints.Length);
+        Assert.Single(endpoints.OfType<GetFoodByIdEndpoint>());
         Assert.Single(endpoints.OfType<GetDiaryDayEndpoint>());
         Assert.Single(endpoints.OfType<LogFoodEndpoint>());
         Assert.Single(endpoints.OfType<CreateFoodEndpoint>());

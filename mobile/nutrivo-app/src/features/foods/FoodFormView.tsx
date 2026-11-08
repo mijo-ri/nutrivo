@@ -9,6 +9,7 @@ import { FoodButton } from './FoodButton';
 import { FoodFormField } from './FoodFormField';
 import { emptyFoodDraft, type FoodDraft, type ServingDraft, validateFoodDraft } from './foodForm';
 import type { NewFood } from './food';
+import { foodErrorMessage } from './foodsApi';
 
 const nutrients = [
     ['kilocalories', 'Kalorien (kcal)'],
@@ -20,48 +21,64 @@ const nutrients = [
 export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmittel speichern', onSave, onCancel }: {
     initialDraft?: FoodDraft;
     saveLabel?: string;
-    onSave: (food: NewFood) => void;
+    onSave: (food: NewFood) => Promise<void>;
     onCancel: () => void;
 }) {
     const [draft, setDraft] = useState<FoodDraft>(initialDraft);
     const [submitted, setSubmitted] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string>();
     const nextServing = useRef(1);
     const saved = useRef(false);
     const validation = validateFoodDraft(draft);
     const errors = submitted ? validation.errors : {};
 
     function change<K extends keyof FoodDraft>(key: K, value: FoodDraft[K]) {
+        if (saved.current) return;
+        setSaveError(undefined);
         setDraft(current => ({ ...current, [key]: value }));
     }
 
-    function changeServing(key: string, field: keyof Omit<ServingDraft, 'key' | 'id'>, value: string) {
+    function changeServing(key: string, field: keyof Omit<ServingDraft, 'key'>, value: string) {
+        if (saved.current) return;
+        setSaveError(undefined);
         setDraft(current => ({
             ...current,
             servingSizes: current.servingSizes.map(serving => serving.key === key ? { ...serving, [field]: value } : serving),
         }));
     }
 
-    function save() {
+    async function save() {
         setSubmitted(true);
         if (!validation.food || saved.current) {
             return;
         }
         saved.current = true;
-        onSave(validation.food);
+        setSaving(true);
+        setSaveError(undefined);
+        try {
+            await onSave(validation.food);
+        } catch (error) {
+            saved.current = false;
+            setSaveError(foodErrorMessage(error));
+            setSaving(false);
+        }
     }
 
     return (
         <>
-            <AppText tone="secondary">Deine Lebensmittel bleiben für diese App-Sitzung erhalten.</AppText>
+            <AppText tone="secondary">Deine Lebensmittel werden dauerhaft gespeichert.</AppText>
             <Card>
                 <AppText variant="headlineMd" accessibilityRole="header">Stammdaten</AppText>
                 <FoodFormField
+                    disabled={saving}
                     label="Name"
                     value={draft.name}
                     onChangeText={value => change('name', value)}
                     error={errors.name}
                 />
                 <FoodFormField
+                    disabled={saving}
                     label="Marke (optional)"
                     value={draft.brand}
                     onChangeText={value => change('brand', value)}
@@ -72,6 +89,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                 <AppText variant="headlineMd" accessibilityRole="header">Bezugsmenge</AppText>
                 <AppText tone="secondary">Alle Nährwerte unten gelten für diese Menge.</AppText>
                 <FoodFormField
+                    disabled={saving}
                     label="Menge"
                     value={draft.referenceQuantity}
                     onChangeText={value => change('referenceQuantity', value)}
@@ -82,8 +100,10 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                     {(['g', 'ml'] as const).map(unit => (
                         <Pressable
                             key={unit}
+                            disabled={saving}
                             {...(Platform.OS === 'web' ? {
                                 onKeyDown: event => {
+                                    if (saved.current) return;
                                     const { key, repeat } = event.nativeEvent;
                                     if (key === ' ') {
                                         event.preventDefault();
@@ -100,7 +120,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                             } satisfies Pick<PressableProps, 'onKeyDown'> : {})}
                             onPress={() => change('referenceUnit', unit)}
                             accessibilityRole="radio"
-                            accessibilityState={{ checked: draft.referenceUnit === unit }}
+                            accessibilityState={{ checked: draft.referenceUnit === unit, disabled: saving }}
                             aria-checked={draft.referenceUnit === unit}
                             accessibilityLabel={unit === 'g' ? 'Gramm' : 'Milliliter'}
                             style={({ pressed }) => [styles.unit, draft.referenceUnit === unit && styles.selectedUnit, pressed && styles.pressed]}
@@ -115,6 +135,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                 <AppText tone="secondary">Pro {draft.referenceQuantity || '…'} {draft.referenceUnit}</AppText>
                 {nutrients.map(([key, label]) => (
                     <FoodFormField
+                        disabled={saving}
                         key={key}
                         label={label}
                         value={draft[key]}
@@ -131,6 +152,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                     <View key={serving.key} style={styles.serving}>
                         <AppText variant="headlineMd" accessibilityRole="header">Portion {index + 1}</AppText>
                         <FoodFormField
+                            disabled={saving}
                             label="Portionsmenge"
                             accessibilityLabel={`Portion ${index + 1}: Menge`}
                             value={serving.quantity}
@@ -139,6 +161,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                             numeric
                         />
                         <FoodFormField
+                            disabled={saving}
                             label="Einheit"
                             accessibilityLabel={`Portion ${index + 1}: Einheit`}
                             placeholder="z. B. EL, Stück, Becher"
@@ -147,6 +170,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                             error={errors[`${serving.key}.unit`]}
                         />
                         <FoodFormField
+                            disabled={saving}
                             label="Bezeichnung (optional)"
                             accessibilityLabel={`Portion ${index + 1}: Bezeichnung (optional)`}
                             placeholder="z. B. Gestrichen"
@@ -155,6 +179,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                             error={errors[`${serving.key}.label`]}
                         />
                         <FoodFormField
+                            disabled={saving}
                             label={`Entspricht (${draft.referenceUnit})`}
                             accessibilityLabel={`Portion ${index + 1}: Entspricht in ${draft.referenceUnit}`}
                             value={serving.equivalentQuantity}
@@ -164,6 +189,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                         />
                         <FoodButton
                             label={`Portion ${index + 1} entfernen`}
+                            disabled={saving}
                             secondary
                             onPress={() => setDraft(current => ({
                                 ...current,
@@ -174,6 +200,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
                 ))}
                 <FoodButton
                     label="Portionsgrösse hinzufügen"
+                    disabled={saving}
                     secondary
                     onPress={() => {
                         const key = `serving-${nextServing.current++}`;
@@ -190,8 +217,9 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
             {submitted && !validation.food && (
                 <AppText accessibilityRole="alert" style={styles.error}>Bitte prüfe die markierten Felder. Das Lebensmittel wurde noch nicht gespeichert.</AppText>
             )}
-            <FoodButton label={saveLabel} onPress={save} />
-            <FoodButton label="Abbrechen" secondary onPress={onCancel} />
+            {saveError && <AppText accessibilityRole="alert" style={styles.error}>{saveError}</AppText>}
+            <FoodButton label={saving ? 'Wird gespeichert …' : saveLabel} disabled={saving} onPress={() => { void save(); }} />
+            <FoodButton label="Abbrechen" secondary disabled={saving} onPress={onCancel} />
         </>
     );
 }

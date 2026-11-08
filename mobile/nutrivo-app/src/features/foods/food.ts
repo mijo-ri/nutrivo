@@ -6,7 +6,6 @@ export type ServingSize = Readonly<{
     equivalentQuantity: number;
 }>;
 
-// Local preview data; the backend remains authoritative when integration is added.
 export type Food = Readonly<{
     id: string;
     name: string;
@@ -21,11 +20,9 @@ export type Food = Readonly<{
 }>;
 
 export type NewFood = Omit<Food, 'id' | 'servingSizes'> & {
-    // Updates retain existing serving IDs; creation always assigns fresh IDs.
-    servingSizes: readonly (Omit<ServingSize, 'id'> & { id?: string })[];
+    servingSizes: readonly Omit<ServingSize, 'id'>[];
 };
 
-const foodOrder = new Intl.Collator('de-CH', { sensitivity: 'base' });
 const numberFormat = new Intl.NumberFormat('de-CH', { maximumFractionDigits: 2 });
 const quantityFormat = new Intl.NumberFormat('de-CH', { maximumSignificantDigits: 21 });
 
@@ -35,14 +32,4 @@ export function formatFoodNumber(value: number): string {
 
 export function formatFoodQuantity(value: number): string {
     return quantityFormat.format(value);
-}
-
-export function searchFoods(foods: readonly Food[], search: string): Food[] {
-    const query = search.trim().toLocaleLowerCase('de-CH');
-
-    return foods
-        .filter(food => food.name.toLocaleLowerCase('de-CH').includes(query)
-            || food.brand?.toLocaleLowerCase('de-CH').includes(query))
-        .sort((a, b) => foodOrder.compare(a.name, b.name)
-            || foodOrder.compare(a.brand ?? '', b.brand ?? ''));
 }

@@ -3,7 +3,6 @@ using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Nutrivo.Application.Abstractions;
 using Nutrivo.Application.Foods.SearchFoods;
-using Nutrivo.Domain.Foods;
 
 namespace Nutrivo.Api.Endpoints.Foods.SearchFoods;
 
@@ -62,34 +61,7 @@ public sealed class SearchFoodsEndpoint : IEndpoint
         }
 
         var value = result.Value;
-        var items = value
-            .Items.Select(item => new SearchFoodResponse(
-                    item.Id,
-                    item.Name,
-                    item.Brand,
-                    item.ReferenceQuantity,
-                    item.ReferenceUnit,
-                    item.Kilocalories,
-                    item.ProteinGrams,
-                    item.CarbohydratesGrams,
-                    item.FatGrams,
-                    item
-                        .ServingSizes.Select(serving => new SearchServingSizeResponse(
-                                serving.Id,
-                                serving.Quantity,
-                                serving.Unit,
-                                serving.Label,
-                                serving.EquivalentQuantity,
-                                NutritionRounding.ForDisplay(serving.Kilocalories),
-                                NutritionRounding.ForDisplay(serving.ProteinGrams),
-                                NutritionRounding.ForDisplay(serving.CarbohydratesGrams),
-                                NutritionRounding.ForDisplay(serving.FatGrams)
-                            )
-                        )
-                        .ToImmutableArray()
-                )
-            )
-            .ToImmutableArray();
+        var items = value.Items.Select(FoodResponseMapping.Map).ToImmutableArray();
 
         return TypedResults.Ok(
             new SearchFoodsResponse(items, value.Page, value.PageSize, value.TotalCount)

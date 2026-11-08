@@ -7,6 +7,7 @@ using Nutrivo.Application.Diaries.LogFood;
 using Nutrivo.Domain.Diaries;
 using Nutrivo.Application.Foods;
 using Nutrivo.Application.Foods.CreateFood;
+using Nutrivo.Application.Foods.GetFoodById;
 using Nutrivo.Application.Foods.SearchFoods;
 using Nutrivo.Domain.Common;
 using Nutrivo.Domain.Foods;
@@ -64,6 +65,10 @@ public sealed class DependencyInjectionTests
         );
 
         Assert.IsType<CreateFoodCommandHandler>(first);
+        Assert.IsType<GetFoodByIdQueryHandler>(
+            firstScope.ServiceProvider
+                .GetRequiredService<IQueryHandler<GetFoodByIdQuery, FoodReadModel>>()
+        );
         var diary = firstScope.ServiceProvider
             .GetRequiredService<IQueryHandler<GetDiaryDayQuery, GetDiaryDayResult>>();
         Assert.IsType<GetDiaryDayQueryHandler>(diary);
@@ -289,6 +294,14 @@ public sealed class DependencyInjectionTests
 
     public sealed class UnusedFoodQueries : IFoodQueries
     {
+        public Task<FoodReadModel?> GetByIdAsync(
+            Nutrivo.Domain.Foods.FoodId id,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<SearchFoodsResult> SearchAsync(
             string? search,
             int page,
