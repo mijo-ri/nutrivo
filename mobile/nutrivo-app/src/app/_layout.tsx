@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { FoodsProvider } from '@/features/foods/FoodsProvider';
 import { fontFamilies, theme } from '@/shared/theme/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -59,15 +60,19 @@ export default function RootLayout() {
                 </SafeAreaView>
             ) : (
                 <ThemeProvider value={navigationTheme}>
-                    <Stack
-                        screenOptions={{
-                            headerShown: false,
-                            contentStyle: { backgroundColor: theme.colors.background },
-                        }}
-                    >
-                        <Stack.Screen name="(tabs)" />
-                        <Stack.Screen name="food-selection" />
-                    </Stack>
+                    <FoodsProvider>
+                        <Stack
+                            screenOptions={{
+                                headerShown: false,
+                                contentStyle: { backgroundColor: theme.colors.background },
+                            }}
+                        >
+                            <Stack.Screen name="(tabs)" />
+                            <Stack.Screen name="food-selection" />
+                            <Stack.Screen name="food-create" />
+                            <Stack.Screen name="food-details" />
+                        </Stack>
+                    </FoodsProvider>
                 </ThemeProvider>
             )}
         </SafeAreaProvider>

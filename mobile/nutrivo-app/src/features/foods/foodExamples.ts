@@ -1,120 +1,191 @@
-// Illustrative catalogue values per 100 g or 100 ml, independent of diary portions.
-export type ExampleFood = Readonly<{
-    id: string;
-    name: string;
-    brand?: string;
-    referenceUnit: 'g' | 'ml';
-    kilocaloriesPer100: number;
-}>;
+import type { Food } from './food';
 
-export const exampleFoods: readonly ExampleFood[] = [
+// Illustrative catalogue values, independent of the diary's portion snapshots.
+export const exampleFoods: readonly Food[] = [
     {
         id: 'apple',
         name: 'Apfel',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 52,
+        kilocalories: 52,
+        proteinGrams: 0.3,
+        carbohydratesGrams: 11.4,
+        fatGrams: 0.2,
+        servingSizes: [
+            { id: 'apple-serving-1', quantity: 1, unit: 'Stück', label: 'Mittelgross', equivalentQuantity: 150 },
+        ],
     },
     {
         id: 'banana',
         name: 'Banane',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 89,
+        kilocalories: 89,
+        proteinGrams: 1.1,
+        carbohydratesGrams: 20,
+        fatGrams: 0.3,
+        servingSizes: [
+            { id: 'banana-serving-1', quantity: 1, unit: 'Stück', equivalentQuantity: 120 },
+        ],
     },
     {
         id: 'broccoli',
         name: 'Brokkoli',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 34,
+        kilocalories: 34,
+        proteinGrams: 2.5,
+        carbohydratesGrams: 4,
+        fatGrams: 0.5,
+        servingSizes: [],
     },
     {
         id: 'oats-alpen',
         name: 'Haferflocken',
         brand: 'Alpenkorn',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 370,
+        kilocalories: 370,
+        proteinGrams: 14,
+        carbohydratesGrams: 60,
+        fatGrams: 8,
+        servingSizes: [
+            { id: 'oats-alpen-serving-1', quantity: 1, unit: 'Portion', equivalentQuantity: 50 },
+            { id: 'oats-alpen-serving-2', quantity: 1, unit: 'EL', label: 'Gestrichen', equivalentQuantity: 10 },
+        ],
     },
     {
         id: 'oats-morgen',
         name: 'Haferflocken',
         brand: 'Morgenmühle',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 372,
+        kilocalories: 372,
+        proteinGrams: 13.5,
+        carbohydratesGrams: 59,
+        fatGrams: 7.5,
+        servingSizes: [],
     },
     {
         id: 'oat-drink',
         name: 'Haferdrink ungesüsst',
         brand: 'Morgenmühle',
+        referenceQuantity: 100,
         referenceUnit: 'ml',
-        kilocaloriesPer100: 43,
+        kilocalories: 43,
+        proteinGrams: 1,
+        carbohydratesGrams: 6.5,
+        fatGrams: 1.5,
+        servingSizes: [
+            { id: 'oat-drink-serving-1', quantity: 1, unit: 'Glas', equivalentQuantity: 250 },
+        ],
     },
     {
         id: 'quark',
         name: 'Magerquark',
         brand: 'Alpenhof',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 67,
+        kilocalories: 67,
+        proteinGrams: 12,
+        carbohydratesGrams: 4,
+        fatGrams: 0.2,
+        servingSizes: [
+            { id: 'quark-serving-1', quantity: 1, unit: 'Becher', equivalentQuantity: 250 },
+        ],
     },
     {
         id: 'milk',
         name: 'Milch',
         brand: 'Alpenhof',
+        referenceQuantity: 100,
         referenceUnit: 'ml',
-        kilocaloriesPer100: 64,
+        kilocalories: 64,
+        proteinGrams: 3.3,
+        carbohydratesGrams: 4.7,
+        fatGrams: 3.5,
+        servingSizes: [
+            { id: 'milk-serving-1', quantity: 1, unit: 'Glas', equivalentQuantity: 200 },
+        ],
     },
     {
         id: 'olive-oil',
         name: 'Olivenöl',
         brand: 'Sonnenhain',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 900,
+        kilocalories: 900,
+        proteinGrams: 0,
+        carbohydratesGrams: 0,
+        fatGrams: 100,
+        servingSizes: [
+            { id: 'olive-oil-serving-1', quantity: 1, unit: 'EL', equivalentQuantity: 13.5 },
+        ],
     },
     {
         id: 'orange-juice',
         name: 'Orangensaft',
         brand: 'Sonnenhain',
+        referenceQuantity: 100,
         referenceUnit: 'ml',
-        kilocaloriesPer100: 45,
+        kilocalories: 45,
+        proteinGrams: 0.7,
+        carbohydratesGrams: 10,
+        fatGrams: 0.2,
+        servingSizes: [
+            { id: 'orange-juice-serving-1', quantity: 1, unit: 'Glas', equivalentQuantity: 250 },
+        ],
     },
     {
         id: 'rice',
         name: 'Reis, trocken',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 350,
+        kilocalories: 350,
+        proteinGrams: 7.5,
+        carbohydratesGrams: 77.5,
+        fatGrams: 1,
+        servingSizes: [
+            { id: 'rice-serving-1', quantity: 1, unit: 'Portion', label: 'Trocken', equivalentQuantity: 80 },
+        ],
     },
     {
         id: 'tofu',
         name: 'Räuchertofu mit Kräutern und Sonnenblumenkernen',
         brand: 'Grüne Küche Naturkost',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 170,
+        kilocalories: 170,
+        proteinGrams: 19,
+        carbohydratesGrams: 2,
+        fatGrams: 10,
+        servingSizes: [
+            { id: 'tofu-serving-1', quantity: 1, unit: 'Packung', equivalentQuantity: 200 },
+        ],
     },
     {
         id: 'water',
         name: 'Wasser',
+        referenceQuantity: 100,
         referenceUnit: 'ml',
-        kilocaloriesPer100: 0,
+        kilocalories: 0,
+        proteinGrams: 0,
+        carbohydratesGrams: 0,
+        fatGrams: 0,
+        servingSizes: [],
     },
     {
         id: 'whey',
         name: 'Whey Protein Vanille',
         brand: 'Kraftquelle',
+        referenceQuantity: 100,
         referenceUnit: 'g',
-        kilocaloriesPer100: 380,
+        kilocalories: 380,
+        proteinGrams: 80,
+        carbohydratesGrams: 6.7,
+        fatGrams: 3.3,
+        servingSizes: [
+            { id: 'whey-serving-1', quantity: 1, unit: 'Messlöffel', equivalentQuantity: 30 },
+        ],
     },
 ];
-
-const foodOrder = new Intl.Collator('de-CH', { sensitivity: 'base' });
-
-export function searchExampleFoods(search: string): ExampleFood[] {
-    const query = search.trim().toLocaleLowerCase('de-CH');
-
-    if (!query) {
-        return [];
-    }
-
-    return exampleFoods
-        .filter(food => food.name.toLocaleLowerCase('de-CH').includes(query)
-            || food.brand?.toLocaleLowerCase('de-CH').includes(query))
-        .sort((a, b) => foodOrder.compare(a.name, b.name)
-            || foodOrder.compare(a.brand ?? '', b.brand ?? ''));
-}

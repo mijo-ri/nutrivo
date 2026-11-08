@@ -1,26 +1,25 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
     FlatList,
     KeyboardAvoidingView,
     Platform,
     Pressable,
     StyleSheet,
-    TextInput,
-    type TextInputInstance,
     View,
-    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getMealName } from '@/features/diary/diaryMeals';
-import { formatNutrition } from '@/features/diary/diaryExample';
 import { useIsClient } from '@/shared/hooks/useIsClient';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-import { searchExampleFoods, type ExampleFood } from './foodExamples';
+import { searchFoods } from './food';
+import { FoodRow } from './FoodRow';
+import { FoodSearchInput } from './FoodSearchInput';
+import { useFoods } from './FoodsProvider';
 
 export function FoodSelectionScreen() {
     const router = useRouter();
@@ -28,10 +27,9 @@ export function FoodSelectionScreen() {
     const isClient = useIsClient();
     const mealName = isClient ? getMealName(meal) : undefined;
     const [search, setSearch] = useState('');
-    const [focused, setFocused] = useState(false);
-    const input = useRef<TextInputInstance>(null);
-    const foods = searchExampleFoods(search);
+    const { foods: catalogue } = useFoods();
     const hasQuery = search.trim().length > 0;
+    const foods = hasQuery ? searchFoods(catalogue, search) : [];
 
     function goBack() {
         if (router.canGoBack()) {
@@ -73,49 +71,7 @@ export function FoodSelectionScreen() {
                         </View>
                     </View>
                     <View style={styles.searchSection}>
-                        <View style={[styles.searchBox, focused && styles.focusedSearch]}>
-                            <MaterialDesignIcons
-                                name="magnify"
-                                size={22}
-                                color={theme.colors.textSecondary}
-                                accessible={false}
-                                aria-hidden
-                            />
-                            <TextInput
-                                ref={input}
-                                value={search}
-                                onChangeText={setSearch}
-                                onFocus={() => setFocused(true)}
-                                onBlur={() => setFocused(false)}
-                                accessibilityLabel="Lebensmittel oder Marke suchen"
-                                placeholder="Lebensmittel oder Marke suchen"
-                                placeholderTextColor={theme.colors.textSecondary}
-                                selectionColor={theme.colors.primary}
-                                autoCorrect={false}
-                                autoCapitalize="none"
-                                returnKeyType="search"
-                                style={styles.input}
-                            />
-                            {search.length > 0 && (
-                                <Pressable
-                                    onPress={() => {
-                                        setSearch('');
-                                        input.current?.focus();
-                                    }}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Suche löschen"
-                                    style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-                                >
-                                    <MaterialDesignIcons
-                                        name="close"
-                                        size={22}
-                                        color={theme.colors.textSecondary}
-                                        accessible={false}
-                                        aria-hidden
-                                    />
-                                </Pressable>
-                            )}
-                        </View>
+                        <FoodSearchInput value={search} onChangeText={setSearch} />
                         <AppText tone="secondary" accessibilityLiveRegion="polite">
                             {hasQuery ? `${foods.length} Lebensmittel gefunden` : 'Suche nach Lebensmitteln oder Marken'}
                         </AppText>
@@ -156,29 +112,6 @@ export function FoodSelectionScreen() {
     );
 }
 
-function FoodRow({ food }: { food: ExampleFood }) {
-    const { width, fontScale } = useWindowDimensions();
-    const stacked = width < 360 || fontScale > 1.2;
-    const calories = formatNutrition(food.kilocaloriesPer100);
-
-    return (
-        <View
-            accessible
-            accessibilityLabel={`${food.name}${food.brand ? `, ${food.brand}` : ''}, ${calories} Kilokalorien pro 100 ${food.referenceUnit === 'g' ? 'Gramm' : 'Milliliter'}`}
-            style={[styles.foodRow, stacked && styles.stackedRow]}
-        >
-            <View style={styles.foodName}>
-                <AppText variant="bodyLg">{food.name}</AppText>
-                {food.brand && <AppText tone="secondary">{food.brand}</AppText>}
-            </View>
-            <View style={[styles.nutrition, stacked && styles.stackedNutrition]}>
-                <AppText variant="numericMd" tone="accent">{calories} kcal</AppText>
-                <AppText variant="bodySm" tone="secondary">pro 100 {food.referenceUnit}</AppText>
-            </View>
-        </View>
-    );
-}
-
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
@@ -216,30 +149,6 @@ const styles = StyleSheet.create({
         paddingBottom: theme.spacing.lg,
         gap: theme.spacing.sm,
     },
-    searchBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing.sm,
-        minHeight: 52,
-        paddingLeft: theme.spacing.md,
-        paddingRight: theme.spacing.xs,
-        borderWidth: 1,
-        borderColor: theme.colors.outlineVariant,
-        borderRadius: theme.radii.lg,
-        backgroundColor: theme.colors.surface,
-    },
-    focusedSearch: {
-        borderColor: theme.colors.primary,
-    },
-    input: {
-        flex: 1,
-        minWidth: 0,
-        minHeight: 50,
-        paddingVertical: theme.spacing.md,
-        color: theme.colors.text,
-        ...theme.typography.bodyLg,
-        ...Platform.select({ web: { outlineStyle: 'solid', outlineWidth: 0 } }),
-    },
     list: {
         flex: 1,
     },
@@ -265,31 +174,5 @@ const styles = StyleSheet.create({
     },
     centered: {
         textAlign: 'center',
-    },
-    foodRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing.lg,
-        padding: theme.spacing.lg,
-        borderRadius: theme.radii.lg,
-        backgroundColor: theme.colors.surface,
-    },
-    stackedRow: {
-        flexDirection: 'column',
-        alignItems: 'stretch',
-        gap: theme.spacing.sm,
-    },
-    foodName: {
-        flex: 1,
-        minWidth: 0,
-        gap: theme.spacing.xs,
-    },
-    nutrition: {
-        flexShrink: 1,
-        alignItems: 'flex-end',
-        gap: theme.spacing.xs,
-    },
-    stackedNutrition: {
-        alignItems: 'flex-start',
     },
 });

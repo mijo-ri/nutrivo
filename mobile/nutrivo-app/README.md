@@ -3,9 +3,9 @@
 React Native with TypeScript, Expo SDK 58 and Expo Router. The app has a shared
 header and bottom tabs for the diary, foods and nutrition targets. The diary
 shows a design preview with example meals and daily nutrition totals. Its add
-buttons open a searchable example food catalogue; foods and targets tabs still
-show introductions using the shared Nutrivo theme. The app does not fetch
-nutrition data or require the API or PostgreSQL to be running.
+buttons open a searchable food catalogue. The foods tab supports searching, viewing
+and creating foods with nutrition and serving sizes; targets remains a placeholder.
+The app does not fetch nutrition data or require the API or PostgreSQL to be running.
 
 ## Run on your phone
 
@@ -64,10 +64,10 @@ The primary development workflow is Expo Go on a physical phone.
 
 ```text
 src/
-  app/                  Root stack with /food-selection
+  app/                  Root stack with food selection, creation and details
     (tabs)/             Tabs: /, /foods and /targets
   features/diary/       Diary screen
-  features/foods/       Food selection, example catalogue and foods tab placeholder
+  features/foods/       Food catalogue, session state, search, creation and details
   features/targets/     Nutrition targets placeholder screen
   shared/
     theme/              Typed colors, spacing, radii and typography
@@ -83,7 +83,8 @@ without runtime requests to Google Fonts. Text retains native font scaling.
 Numeric text styles use tabular figures.
 
 The root layout uses an Expo Router stack. Its `(tabs)` group contains JavaScript
-tabs with a shared `AppHeader`; `/food-selection` opens above them without a tab bar.
+tabs with a shared `AppHeader`; `/food-selection`, `/food-create` and `/food-details`
+open above them without a tab bar.
 The header shows Nutrivo above the current page title and a circular profile
 icon. The profile is labelled for screen readers and has no action yet. The
 bottom bar keeps icons above the labels in portrait and landscape, highlights
@@ -98,7 +99,7 @@ preloaded alongside Geist with `expo-font`, without remote font requests or a
 custom native build. Decorative icons are hidden from screen readers.
 
 The diary (`/`) is the initial tab and the Android back-navigation anchor.
-Foods (`/foods`) and targets (`/targets`) are placeholders for later slices.
+Foods (`/foods`) opens the catalogue; targets (`/targets`) is a placeholder.
 Direct URLs work in the web preview. No backend client or authentication is
 included.
 
@@ -125,8 +126,8 @@ The native picker uses `@react-native-community/datetimepicker`, installed throu
 `npx expo install` to match the Expo SDK and work in Expo Go. Its native imports
 are excluded from web through a platform-specific component. No custom native
 build is required. Add-entry buttons open food selection for their respective
-meal. Food rows are read-only. There is no persistence or local editing, barcode
-scanning or voice input.
+meal. Food rows are read-only. There is no persistent storage, editing of saved
+foods, barcode scanning or voice input.
 
 The four expanded meal cards contain breakfast (six entries), lunch (four),
 dinner labelled “Nachtessen” (five), and an empty snacks state. Rice and quinoa
@@ -161,18 +162,84 @@ case-insensitively. Results sort by name and then brand using `de-CH` ordering.
 Clearing the field restores the initial hint; unmatched queries show
 “Keine Lebensmittel gefunden”.
 
-The separate, typed catalogue in `src/features/foods/foodExamples.ts` contains
-illustrative values per 100 g or 100 ml, including example brands and unbranded
-foods. These are not inferred from consumed diary portions. Each row shows its
-name, optional brand and whole-number `de-CH` kcal with the explicit reference
-unit. Rows stack their nutrition below the name on narrow screens or with large
-native text. They are read-only: no quantity entry, selection action, saving,
+The shared, typed catalogue is seeded from `src/features/foods/foodExamples.ts`
+with illustrative macros, brands and portions per 100 g or 100 ml. It also includes
+foods created during this app session, with their own reference quantities. These
+values are independent of consumed diary portions. Each row shows its name,
+optional brand and `de-CH` kcal with up to two fractional digits and an explicit
+reference quantity and unit. Rows stack their nutrition below the name on narrow
+screens or with large native text. They are read-only: no quantity entry, selection action, saving,
 network requests or changes to diary totals are included.
 
 For static web exports, `useIsClient` defers device-dependent diary content and
-the URL-dependent meal subtitle until hydration. The static HTML and initial
-browser render therefore agree; native rendering and later client navigation
+the URL-dependent meal subtitle and food detail content until hydration. The
+static HTML and initial browser render therefore agree; native rendering and later client navigation
 show this content immediately.
+
+### Food management preview
+
+`/foods` shows all foods alphabetically by name, then brand. The search matches
+name or brand substrings, ignoring surrounding whitespace and case. Clearing it
+shows the complete catalogue again. Tapping a row opens `/food-details?id=…`,
+showing the food, reference quantity, kcal, protein, carbohydrates, fat and each
+additional serving with its equivalent in the reference unit.
+
+“Lebensmittel hinzufügen” opens `/food-create`. Enter a name, an optional brand,
+a positive reference quantity (initially 100 g; g/ml selectable), and all four
+nonnegative nutrition values. Zero is a known value; empty nutrient fields are
+invalid. Decimal commas and decimal points are accepted; incomplete decimals,
+non-finite values and partially numeric text are rejected. Text fields accept up
+to 200 trimmed characters. Inputs are stored without display rounding. Nutrition
+displays use up to two fractional digits; quantity displays preserve small amounts
+such as 0.001 g instead of rounding them to zero.
+
+Optional portions can be added and removed while drafting. Each requires a
+positive quantity, a free-text unit and a positive equivalent quantity in the
+food's g/ml reference unit; its label is optional. For example, “2 EL = 30 ml”
+means that the entire two-spoon portion equals 30 ml. Incomplete portion rows
+must be completed or removed before saving. Changing the reference unit changes
+the unit of all equivalents; no automatic g/ml conversion takes place.
+
+Saving validates every field, adds the food once and replaces the form with its
+details. The header back button returns to foods, including on direct links;
+“Abbrechen” or leaving the form discards the draft. Missing, repeated or unknown
+detail IDs show a not-found message and a link to the catalogue.
+
+`FoodsProvider` holds the catalogue above the router stack using React Context
+and state. New foods are available immediately in the foods tab and diary search.
+Switching screens retains them; restarting or reloading resets to the examples.
+A direct link to a session-created food after reload therefore shows not found.
+Diary search rows remain read-only and diary snapshots/totals are unaffected.
+There is no backend integration, persistent storage, editing or deletion of saved
+foods, and no new dependencies.
+
+Food management acceptance checks:
+
+1. Open foods: all 14 examples appear in name/brand order. Search
+   ` HaFeRfLoCkEn `, `ALPEN`, `flocken`, an unmatched term and whitespace.
+   Clear the query and verify the complete list returns.
+2. Open an apple, water and oat drink: check absent brands, zero values, all four
+   nutrients, g/ml and servings. Check the long tofu name wraps.
+3. Create a food with reference 30 g, decimals in both formats, zero macros,
+   optional brand and no portions. Save and check its details and catalogue row.
+   Repeat with a brand, 250 ml and multiple portions, including “2 EL = 30 ml”.
+4. Leave required fields empty; try negative/zero quantities, negative nutrients,
+   `1,`, `1.`, `12abc`, non-finite numbers and text over 200 characters. Saving
+   must show field errors and retain the draft without creating a food. Zero
+   nutrients and decimal quantities must work. Correct errors and save once.
+5. Add multiple portions, leave one incomplete and verify saving is blocked.
+   Remove it and save. Check remaining portions retain their order and values.
+   Change the reference unit and check all equivalent labels follow it.
+6. Cancel a filled form and reopen; defaults must return without an added food.
+   After saving, return to foods, switch to diary and find the new food by name
+   and brand. Diary search must still start empty and totals must stay unchanged.
+7. Load `/food-create`, `/food-details?id=apple`, `/food-details`, an unknown ID
+   and repeated IDs directly; verify the appropriate screen and return to foods.
+   Reload a local food's detail URL; verify not found and the reset catalogue.
+8. Check 320- and 390-point widths, landscape, large text and browser zoom.
+   Forms and long details must scroll without horizontal overflow; all actions
+   must stay reachable with the native keyboard open. Check focus indication,
+   field/error labels and unit selection with VoiceOver/TalkBack and keyboard.
 
 ## Validation
 
@@ -206,8 +273,8 @@ Manual acceptance in Expo Go:
 2. Check the dark background, lavender Nutrivo title, uppercase page title and
    circular profile icon. The profile icon must not trigger an action.
 3. Switch between Tagebuch, Lebensmittel and Ziele. The diary should display
-   its example day; the other tabs show their matching introduction and header
-   title. Exactly one tab is highlighted.
+   its example day; foods shows the catalogue and targets its introduction.
+   Check the matching header title. Exactly one tab is highlighted.
    On Android, Back from another tab should return to Tagebuch.
 4. Confirm that the header clears the notch and status bar and the tab bar
    clears the bottom gesture area. Both bars must stay visible when scrolling.
@@ -342,4 +409,23 @@ Food selection validation on 2026-11-05:
   Final direct-route checks reported no browser warnings or errors after the
   static hydration adjustment.
 - Physical-device safe areas, keyboard avoidance, native font scaling,
+  VoiceOver/TalkBack, Android hardware Back and browser zoom remain manual checks.
+
+Food management validation on 2026-11-07:
+
+- Lint, strict TypeScript and production exports for iOS, Android and Web passed.
+- Local assertions covered numeric parsing, required fields, zero/negative values,
+  non-finite inputs, text lengths, portion validation/order, input precision,
+  name/brand search, sorting, display formatting and unique example IDs.
+- Browser checks covered create/detail/list navigation, optional brand, a 30.25 g
+  reference, a 250 ml reference, both decimal formats, zero macros, multiple
+  servings, incomplete-serving errors, removing a serving and cancelling drafts.
+  Created foods appeared in both catalogue and read-only diary search; diary
+  totals remained unchanged. Reload reset local foods and showed not found for
+  their old detail links. Known, missing, unknown and repeated detail IDs worked
+  on direct loads without browser runtime warnings or errors.
+- Layout checks covered 320 × 568, 390 × 844 and 844 × 390, including long names
+  and scrolling forms, with no horizontal page overflow. Unit selection exposes
+  its checked state; validation errors are associated with their input fields.
+- Physical-device safe areas, native keyboard avoidance, native large text,
   VoiceOver/TalkBack, Android hardware Back and browser zoom remain manual checks.
