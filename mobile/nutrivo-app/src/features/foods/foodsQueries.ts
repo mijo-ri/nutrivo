@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useIsClient } from '@/shared/hooks/useIsClient';
 
-import { createFood, getFood, searchFoods } from './foodsApi';
+import type { FoodInput } from './food';
+import { createFood, getFood, searchFoods, updateFood } from './foodsApi';
 
 const foodKeys = {
     lists: ['foods', 'list'] as const,
@@ -74,5 +75,20 @@ export function useCreateFood() {
         mutationFn: createFood,
         retry: false,
         onSuccess: () => { void client.invalidateQueries({ queryKey: foodKeys.lists }); },
+    });
+}
+
+export function useUpdateFood(id: string) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationFn: (input: FoodInput) => updateFood(id, input),
+        retry: false,
+        onSuccess: async () => {
+            await client.cancelQueries({ queryKey: foodKeys.detail(id) });
+            await Promise.all([
+                client.invalidateQueries({ queryKey: foodKeys.detail(id), refetchType: 'all' }),
+                client.invalidateQueries({ queryKey: foodKeys.lists }),
+            ]);
+        },
     });
 }

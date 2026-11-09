@@ -7,10 +7,13 @@ namespace Nutrivo.IntegrationTests.Endpoints;
 public sealed class DevelopmentAccessTests
 {
     [Theory]
-    [InlineData("http://localhost:8081")]
-    [InlineData("http://127.0.0.1:8081")]
-    public async Task Development_AllowsConfiguredWebOriginsAndPostPreflight(
-        string origin
+    [InlineData("http://localhost:8081", "POST")]
+    [InlineData("http://localhost:8081", "PUT")]
+    [InlineData("http://127.0.0.1:8081", "POST")]
+    [InlineData("http://127.0.0.1:8081", "PUT")]
+    public async Task Development_AllowsConfiguredWebOriginsAndWritePreflight(
+        string origin,
+        string method
     )
     {
         await using var factory = CreateFactory("Development");
@@ -20,9 +23,12 @@ public sealed class DevelopmentAccessTests
                 AllowAutoRedirect = false
             }
         );
-        using var request = new HttpRequestMessage(HttpMethod.Options, "/foods");
+        using var request = new HttpRequestMessage(
+            HttpMethod.Options,
+            method == "PUT" ? $"/foods/{Guid.NewGuid()}" : "/foods"
+        );
         request.Headers.Add("Origin", origin);
-        request.Headers.Add("Access-Control-Request-Method", "POST");
+        request.Headers.Add("Access-Control-Request-Method", method);
         request.Headers.Add("Access-Control-Request-Headers", "content-type");
         using var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -31,7 +37,7 @@ public sealed class DevelopmentAccessTests
             Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin"))
         );
         Assert.Contains(
-            "POST",
+            method,
             response.Headers.GetValues("Access-Control-Allow-Methods").Single()
         );
         Assert.Contains(

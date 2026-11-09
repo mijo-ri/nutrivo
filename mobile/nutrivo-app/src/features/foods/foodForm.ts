@@ -1,7 +1,8 @@
-import type { Food, NewFood } from './food';
+import type { Food, FoodInput } from './food';
 
 export type ServingDraft = {
     key: string;
+    id?: string;
     quantity: string;
     unit: string;
     label: string;
@@ -25,6 +26,30 @@ export const emptyFoodDraft: FoodDraft = {
     kilocalories: '', proteinGrams: '', carbohydratesGrams: '', fatGrams: '', servingSizes: [],
 };
 
+// Input formatting must round-trip the stored number, including very small/large values.
+const inputNumber = (value: number) => value.toLocaleString('en-US', { useGrouping: false, maximumSignificantDigits: 21 });
+
+export function foodToDraft(food: Food): FoodDraft {
+    return {
+        name: food.name,
+        brand: food.brand ?? '',
+        referenceQuantity: inputNumber(food.referenceQuantity),
+        referenceUnit: food.referenceUnit,
+        kilocalories: inputNumber(food.kilocalories),
+        proteinGrams: inputNumber(food.proteinGrams),
+        carbohydratesGrams: inputNumber(food.carbohydratesGrams),
+        fatGrams: inputNumber(food.fatGrams),
+        servingSizes: food.servingSizes.map(serving => ({
+            key: `existing-${serving.id}`,
+            id: serving.id,
+            quantity: inputNumber(serving.quantity),
+            unit: serving.unit,
+            label: serving.label ?? '',
+            equivalentQuantity: inputNumber(serving.equivalentQuantity),
+        })),
+    };
+}
+
 export type FoodFormErrors = Record<string, string>;
 
 // Reject partial parses, grouping separators, scientific notation and incomplete decimals.
@@ -38,7 +63,7 @@ export function parseFoodNumber(input: string): number | undefined {
 }
 
 export function validateFoodDraft(draft: FoodDraft):
-    { food: NewFood; errors: FoodFormErrors } | { food?: undefined; errors: FoodFormErrors } {
+    { food: FoodInput; errors: FoodFormErrors } | { food?: undefined; errors: FoodFormErrors } {
     const errors: FoodFormErrors = {};
 
     function text(key: string, value: string, required = false): string {
@@ -61,7 +86,7 @@ export function validateFoodDraft(draft: FoodDraft):
         return parsed ?? 0;
     }
 
-    const food: NewFood = {
+    const food: FoodInput = {
         name: text('name', draft.name, true),
         brand: text('brand', draft.brand) || undefined,
         referenceQuantity: number('referenceQuantity', draft.referenceQuantity, true),
@@ -71,6 +96,7 @@ export function validateFoodDraft(draft: FoodDraft):
         carbohydratesGrams: number('carbohydratesGrams', draft.carbohydratesGrams),
         fatGrams: number('fatGrams', draft.fatGrams),
         servingSizes: draft.servingSizes.map(serving => ({
+            id: serving.id,
             quantity: number(`${serving.key}.quantity`, serving.quantity, true),
             unit: text(`${serving.key}.unit`, serving.unit, true),
             label: text(`${serving.key}.label`, serving.label) || undefined,

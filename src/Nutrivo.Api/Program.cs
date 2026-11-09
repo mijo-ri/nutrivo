@@ -24,7 +24,7 @@ if (builder.Environment.IsDevelopment())
                 builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                 ?? []
             )
-            .WithMethods("GET", "POST")
+            .WithMethods("GET", "POST", "PUT")
             .WithHeaders("Content-Type")
         )
     );

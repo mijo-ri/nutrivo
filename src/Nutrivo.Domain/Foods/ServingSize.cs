@@ -20,11 +20,20 @@ public sealed class ServingSize : Entity<ServingSizeId>
         Position = position;
     }
 
-    public int Position { get; }
-    public decimal Quantity { get; }
-    public string Unit { get; }
-    public string? Label { get; }
-    public decimal EquivalentQuantity { get; }
+    public int Position { get; private set; }
+    public decimal Quantity { get; private set; }
+    public string Unit { get; private set; }
+    public string? Label { get; private set; }
+    public decimal EquivalentQuantity { get; private set; }
+
+    internal void Apply(ServingSize validated)
+    {
+        Quantity = validated.Quantity;
+        Unit = validated.Unit;
+        Label = validated.Label;
+        EquivalentQuantity = validated.EquivalentQuantity;
+        Position = validated.Position;
+    }
 
     internal ServingSize AtPosition(int position)
     {
@@ -35,7 +44,8 @@ public sealed class ServingSize : Entity<ServingSizeId>
         decimal quantity,
         string? unit,
         string? label,
-        decimal equivalentQuantity
+        decimal equivalentQuantity,
+        ServingSizeId? id = null
     )
     {
         if (quantity <= 0)
@@ -67,7 +77,7 @@ public sealed class ServingSize : Entity<ServingSizeId>
 
         return Result<ServingSize>.Success(
             new ServingSize(
-                ServingSizeId.New(),
+                id ?? ServingSizeId.New(),
                 quantity,
                 trimmedUnit,
                 string.IsNullOrEmpty(trimmedLabel) ? null : trimmedLabel,

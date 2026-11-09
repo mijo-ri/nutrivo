@@ -8,7 +8,7 @@ import { Card } from '@/shared/ui/Card';
 import { FoodButton } from './FoodButton';
 import { FoodFormField } from './FoodFormField';
 import { emptyFoodDraft, type FoodDraft, type ServingDraft, validateFoodDraft } from './foodForm';
-import type { NewFood } from './food';
+import type { FoodInput } from './food';
 import { foodErrorMessage } from './foodsApi';
 
 const nutrients = [
@@ -21,7 +21,7 @@ const nutrients = [
 export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmittel speichern', onSave, onCancel }: {
     initialDraft?: FoodDraft;
     saveLabel?: string;
-    onSave: (food: NewFood) => Promise<void>;
+    onSave: (food: FoodInput) => Promise<void>;
     onCancel: () => void;
 }) {
     const [draft, setDraft] = useState<FoodDraft>(initialDraft);
@@ -39,7 +39,7 @@ export function FoodForm({ initialDraft = emptyFoodDraft, saveLabel = 'Lebensmit
         setDraft(current => ({ ...current, [key]: value }));
     }
 
-    function changeServing(key: string, field: keyof Omit<ServingDraft, 'key'>, value: string) {
+    function changeServing(key: string, field: keyof Omit<ServingDraft, 'key' | 'id'>, value: string) {
         if (saved.current) return;
         setSaveError(undefined);
         setDraft(current => ({

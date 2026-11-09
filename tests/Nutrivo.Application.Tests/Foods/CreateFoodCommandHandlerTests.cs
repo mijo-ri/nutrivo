@@ -242,6 +242,19 @@ public sealed class CreateFoodCommandHandlerTests
 
         public Exception? Failure { get; init; }
 
+        public Task<Food?> GetForUpdateAsync(
+            FoodId id,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task SaveAsync(Food food, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();

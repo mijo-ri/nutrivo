@@ -6,7 +6,7 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, options: {
-    method?: 'GET' | 'POST';
+    method?: 'GET' | 'POST' | 'PUT';
     body?: unknown;
     signal?: AbortSignal;
 } = {}): Promise<T> {
@@ -41,7 +41,7 @@ export async function apiRequest<T>(path: string, options: {
         return await response.json() as T;
     } catch (error) {
         if (error instanceof ApiError || options.signal?.aborted) throw error;
-        throw new ApiError(options.method === 'POST'
+        throw new ApiError(options.method === 'POST' || options.method === 'PUT'
             ? 'Die Verbindung wurde unterbrochen. Bitte prüfe in der Übersicht, ob das Lebensmittel gespeichert wurde, bevor du erneut speicherst.'
             : 'Die API ist nicht erreichbar. Bitte prüfe die Verbindung und versuche es erneut.');
     } finally {

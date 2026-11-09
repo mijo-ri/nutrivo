@@ -1,6 +1,6 @@
 import { ApiError, apiRequest } from '@/shared/api/apiClient';
 
-import type { Food, NewFood } from './food';
+import type { Food, FoodInput, NewFood } from './food';
 
 type ServingSizeDto = {
     id: string;
@@ -68,7 +68,26 @@ export async function createFood(input: NewFood): Promise<{ id: string }> {
     });
 }
 
+export async function updateFood(id: string, input: FoodInput): Promise<{ id: string }> {
+    return apiRequest(`/foods/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: {
+            ...input,
+            brand: input.brand ?? null,
+            referenceUnit: input.referenceUnit === 'g' ? 1 : 2,
+            servingSizes: input.servingSizes.map(size => ({
+                id: size.id ?? null,
+                quantity: size.quantity, unit: size.unit, label: size.label ?? null,
+                equivalentQuantity: size.equivalentQuantity,
+            })),
+        },
+    });
+}
+
 const validationMessages: Record<string, string> = {
+    'ServingSize.Id.Empty': 'Die Portions-ID ist ungültig. Bitte lade das Lebensmittel erneut.',
+    'Food.ServingSize.Id.Duplicate': 'Eine Portionsgrösse ist mehrfach vorhanden. Bitte lade das Lebensmittel erneut.',
+    'Food.ServingSize.NotFound': 'Eine Portionsgrösse ist nicht mehr verfügbar. Bitte lade das Lebensmittel erneut.',
     'Food.Name.Required': 'Bitte gib einen Namen ein.',
     'Food.Name.TooLong': 'Der Name darf höchstens 200 Zeichen enthalten.',
     'Food.Brand.TooLong': 'Die Marke darf höchstens 200 Zeichen enthalten.',

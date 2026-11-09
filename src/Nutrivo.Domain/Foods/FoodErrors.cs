@@ -4,6 +4,11 @@ namespace Nutrivo.Domain.Foods;
 
 public static class FoodErrors
 {
+    public static readonly DomainError ServingSizeNotFound = new(
+        "Food.ServingSize.NotFound",
+        "The serving size does not belong to this food."
+    );
+
     public static readonly DomainError EmptyId = new(
         "Food.Id.Empty",
         "The food ID must not be empty."

@@ -475,6 +475,19 @@ public sealed class CreateFoodEndpointTests(PostgreSqlFixture fixture)
 
     private sealed class FailingFoodRepository : IFoodRepository
     {
+        public Task<Food?> GetForUpdateAsync(
+            FoodId id,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task SaveAsync(Food food, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();

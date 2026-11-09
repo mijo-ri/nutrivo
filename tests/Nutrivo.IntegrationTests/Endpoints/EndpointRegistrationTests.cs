@@ -10,6 +10,7 @@ using Nutrivo.Api.Endpoints.Diaries.LogFood;
 using Nutrivo.Api.Endpoints.Foods.CreateFood;
 using Nutrivo.Api.Endpoints.Foods.GetFoodById;
 using Nutrivo.Api.Endpoints.Foods.SearchFoods;
+using Nutrivo.Api.Endpoints.Foods.UpdateFood;
 using Nutrivo.Application.Foods;
 using Nutrivo.Domain.Foods;
 
@@ -35,7 +36,8 @@ public sealed class EndpointRegistrationTests
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.Equal(5, endpoints.Length);
+        Assert.Equal(6, endpoints.Length);
+        Assert.Single(endpoints.OfType<UpdateFoodEndpoint>());
         Assert.Single(endpoints.OfType<GetFoodByIdEndpoint>());
         Assert.Single(endpoints.OfType<GetDiaryDayEndpoint>());
         Assert.Single(endpoints.OfType<LogFoodEndpoint>());
@@ -133,6 +135,19 @@ public sealed class EndpointRegistrationTests
     private sealed class RecordingFoodRepository : IFoodRepository
     {
         public List<Food> Foods { get; } = [];
+
+        public Task<Food?> GetForUpdateAsync(
+            FoodId id,
+            CancellationToken cancellationToken
+        )
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task SaveAsync(Food food, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
         {

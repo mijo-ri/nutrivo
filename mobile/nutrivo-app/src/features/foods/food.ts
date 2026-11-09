@@ -23,6 +23,10 @@ export type NewFood = Omit<Food, 'id' | 'servingSizes'> & {
     servingSizes: readonly Omit<ServingSize, 'id'>[];
 };
 
+export type FoodInput = Omit<NewFood, 'servingSizes'> & {
+    servingSizes: readonly (Omit<ServingSize, 'id'> & { id?: string })[];
+};
+
 const numberFormat = new Intl.NumberFormat('de-CH', { maximumFractionDigits: 2 });
 const quantityFormat = new Intl.NumberFormat('de-CH', { maximumSignificantDigits: 21 });
 

@@ -97,7 +97,7 @@ There is no fallback to example foods or offline catalogue.
 
 For Web, run `npm run web -- --port 8081` and open `http://localhost:8081`.
 Development CORS permits `http://localhost:8081` and `http://127.0.0.1:8081`, with
-GET/POST and Content-Type preflight support. If using another port or a LAN-hosted
+GET/POST/PUT and Content-Type preflight support. If using another port or a LAN-hosted
 web origin, configure the exact origin through API User Secrets or environment
 configuration, for example from the repository root:
 

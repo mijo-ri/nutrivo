@@ -221,6 +221,16 @@ serving nutrition uses the same two-decimal rounding as search. Invalid GUIDs or
 an empty GUID return `400 Problem Details`; an unknown ID returns `404` with code
 `GetFoodById.NotFound`. Reads do not track or mutate entities.
 
+`PUT /foods/{id}` replaces the editable food fields using the same fields as
+creation. Serving inputs additionally accept an optional `id`: existing IDs are
+preserved, missing IDs create new servings, and omitted servings are deleted.
+Missing, null or empty serving lists remove all servings. The request defines
+their order. Changing the reference basis performs no automatic conversion.
+Success returns `200` with `{ "id": "..." }`; validation errors return `400`,
+and an unknown food returns `404` with code `UpdateFood.NotFound`. Historical
+diary snapshots remain unchanged. The mobile details screen opens a prefilled
+edit form and refreshes details and catalogue queries after saving.
+
 For Expo Go, bind the development API to the LAN and configure the mobile app's
 `EXPO_PUBLIC_API_URL` with the computer's LAN address:
 
@@ -471,3 +481,4 @@ changing diary content.
 - [Food search and read access](docs/adr/0004-food-search.md)
 - [Daily diary read access and capture order](docs/adr/0008-daily-diary-query.md)
 - [Daily and meal nutrition totals](docs/adr/0009-diary-nutrition-totals.md)
+- [Food updates and stable serving identities](docs/adr/0010-update-food.md)

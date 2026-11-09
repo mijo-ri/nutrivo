@@ -49,9 +49,9 @@ export function FoodDetailsScreen() {
                                 </AppText>
                             ))}
                         </Card>
-                        <FoodButton label="Bearbeiten" disabled onPress={() => undefined} />
+                        <FoodButton label="Bearbeiten" onPress={() => router.push({ pathname: '/food-edit', params: { id: food.id } })} />
                         <FoodButton label="Löschen" destructive disabled onPress={() => undefined} />
-                        <AppText tone="secondary">Bearbeiten und Löschen: Noch nicht verfügbar.</AppText>
+                        <AppText tone="secondary">Löschen: Noch nicht verfügbar.</AppText>
                     </>
                 )}
             </>)}

@@ -35,15 +35,15 @@ public sealed class Food : AggregateRoot<FoodId>
         ReferenceUnit = referenceUnit;
     }
 
-    public string Name { get; }
+    public string Name { get; private set; }
 
-    public string? Brand { get; }
+    public string? Brand { get; private set; }
 
-    public decimal ReferenceQuantity { get; }
+    public decimal ReferenceQuantity { get; private set; }
 
-    public ReferenceUnit ReferenceUnit { get; }
+    public ReferenceUnit ReferenceUnit { get; private set; }
 
-    public NutritionalValues NutritionalValues { get; } = null!;
+    public NutritionalValues NutritionalValues { get; private set; } = null!;
 
     public IReadOnlyList<ServingSize> ServingSizes => _servingSizes
         .OrderBy(serving => serving.Position)
@@ -124,6 +124,85 @@ public sealed class Food : AggregateRoot<FoodId>
         }
 
         return Result<Food>.Success(food);
+    }
+
+    public Result<Food> Update(
+        string? name,
+        string? brand,
+        decimal referenceQuantity,
+        ReferenceUnit referenceUnit,
+        NutritionalValues? nutritionalValues,
+        IReadOnlyList<ServingSizeUpdate?>? servingSizes = null
+    )
+    {
+        var servings = new List<ServingSize>();
+        foreach (var input in servingSizes ?? [])
+        {
+            if (input is null)
+            {
+                return Result<Food>.Failure(FoodErrors.ServingSizeRequired);
+            }
+
+            if (input.Id is not null
+                && !_servingSizes.Any(serving => serving.Id == input.Id))
+            {
+                return Result<Food>.Failure(FoodErrors.ServingSizeNotFound);
+            }
+
+            var serving = ServingSize.Create(
+                input.Quantity,
+                input.Unit,
+                input.Label,
+                input.EquivalentQuantity,
+                input.Id
+            );
+            if (serving.IsFailure)
+            {
+                return Result<Food>.Failure(serving.Error!);
+            }
+
+            servings.Add(serving.Value);
+        }
+
+        // Validate the complete replacement before changing any existing entity.
+        var candidate = Create(
+            name,
+            brand,
+            referenceQuantity,
+            referenceUnit,
+            nutritionalValues,
+            servings
+        );
+        if (candidate.IsFailure)
+        {
+            return Result<Food>.Failure(candidate.Error!);
+        }
+
+        var validated = candidate.Value;
+        var replacements = new List<ServingSize>();
+        foreach (var serving in validated.ServingSizes)
+        {
+            var existing =
+                _servingSizes.SingleOrDefault(current => current.Id == serving.Id);
+            if (existing is null)
+            {
+                replacements.Add(serving);
+            }
+            else
+            {
+                existing.Apply(serving);
+                replacements.Add(existing);
+            }
+        }
+
+        Name = validated.Name;
+        Brand = validated.Brand;
+        ReferenceQuantity = validated.ReferenceQuantity;
+        ReferenceUnit = validated.ReferenceUnit;
+        NutritionalValues = validated.NutritionalValues;
+        _servingSizes.Clear();
+        _servingSizes.AddRange(replacements);
+        return Result<Food>.Success(this);
     }
 
     public Result<NutritionalValues> CalculateNutrition(ServingSize servingSize)
