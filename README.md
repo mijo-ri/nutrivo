@@ -84,8 +84,21 @@ To run from a terminal instead, use:
 dotnet run --project src/Nutrivo.Api --launch-profile http
 ```
 
-Run one API instance at a time to avoid port conflicts. To connect a phone and
-keep backend breakpoints active, follow the [mobile setup guide](mobile/nutrivo-app/README.md).
+For a physical phone, select the `http-mobile` profile in Rider and start it with
+**Debug**. This profile selects Development and binds the API to all network
+interfaces at `http://0.0.0.0:5097`; `http` binds only to localhost. Both profiles
+are defined in `src/Nutrivo.Api/Properties/launchSettings.json`, so no additional
+Program arguments are needed in Rider. If `http-mobile` is missing, right-click
+that file and choose **Generate Configurations**.
+
+The equivalent terminal command is:
+
+```sh
+dotnet run --project src/Nutrivo.Api --launch-profile http-mobile
+```
+
+Run one API instance at a time to avoid port conflicts. For the phone's API URL
+and network setup, follow the [mobile setup guide](mobile/nutrivo-app/README.md).
 
 ## Common commands
 

@@ -37,16 +37,18 @@ configuration bundled with the app; never put secrets in it.
 
 ## 2. Make the API reachable
 
-In Rider, open **Run → Edit Configurations**, select the API's `http` launch
-configuration and add `--urls http://0.0.0.0:5097` to **Program arguments**.
-Keep the `http` launch profile selected so the environment remains Development.
-Apply this to your local configuration, then start or restart it with **Debug**.
+In Rider, select the API's `http-mobile` launch configuration from
+`src/Nutrivo.Api/Properties/launchSettings.json` and start it with **Debug**.
+If it is missing, right-click that file and choose **Generate Configurations**.
+The profile selects Development and binds the API to all network interfaces at
+`http://0.0.0.0:5097`; no additional Program arguments are needed. Remove any
+previously added `--urls` override from the configuration.
 See [Rider launch-profile settings](https://www.jetbrains.com/help/rider/Running_LaunchSettings.html).
 
 Alternatively, from a separate terminal at the repository root:
 
 ```sh
-dotnet run --project src/Nutrivo.Api --launch-profile http --urls http://0.0.0.0:5097
+dotnet run --project src/Nutrivo.Api --launch-profile http-mobile
 ```
 
 Run one API instance at a time. Allow API port 5097 through the computer's local
