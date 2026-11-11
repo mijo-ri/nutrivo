@@ -4,6 +4,13 @@ namespace Nutrivo.Application.Foods;
 
 public interface IFoodRepository
 {
+    /// <summary>
+    /// Permanently deletes a food and its servings, committing before returning.
+    /// Returns false when no food exists. Call in a fresh scope without tracked foods
+    /// or an existing transaction.
+    /// </summary>
+    Task<bool> DeleteAsync(FoodId id, CancellationToken cancellationToken);
+
     Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken);
 
     /// <summary>

@@ -142,6 +142,50 @@ and an unknown food returns `404` with code `UpdateFood.NotFound`. Historical
 diary snapshots remain unchanged. The mobile details screen opens a prefilled
 edit form and refreshes details and catalogue queries after saving.
 
+## Delete a food
+
+Replace `<food-id>` with the UUID of the food to delete:
+
+```sh
+curl --fail-with-body --request DELETE \
+  'http://localhost:5097/foods/<food-id>'
+```
+
+`DELETE /foods/{id}` requires no request body. It permanently deletes the food
+and all its catalogue serving sizes atomically, even if the food has already been
+logged. Success returns `204 No Content` with an empty response body only after
+deletion commits. There is no archive or restore operation. Unrelated foods and
+their serving sizes remain unchanged.
+
+Existing diary entries retain their IDs, dates, meals, quantities, food and
+serving snapshots, and consumed nutrition. Diary responses, entry ordering, daily
+totals and meal totals remain unchanged. Historical food and serving IDs continue
+to identify the originally logged items even though those catalogue records no
+longer exist.
+
+After deletion commits, search results exclude the food and `totalCount` reflects
+its removal. `GET /foods/{id}` returns `404` with code `GetFoodById.NotFound`.
+Valid update or logging requests whose food lookup begins after deletion commits
+return `404` with `UpdateFood.NotFound` or `LogFood.Food.NotFound`, respectively;
+they do not recreate the food or save a new diary entry. A logging request that
+already read the food before deletion may still finish saving its snapshot.
+
+Failures use `application/problem+json`:
+
+- A malformed UUID returns `400 Bad Request` through request binding.
+- The all-zero UUID returns `400` with code `Food.Id.Empty`.
+- An unknown or already deleted food returns `404 Not Found` with code
+  `DeleteFood.NotFound`. Repeating a successful delete therefore returns `404`.
+- Unexpected storage failures return generic `500 Problem Details` without
+  internal error details. A failed delete statement leaves the food, its serving
+  sizes and diary history intact.
+
+Invalid or missing targets leave stored data unchanged. For two concurrent
+deletions of an existing food that both complete without a storage failure,
+exactly one returns `204` and the other returns `404` with `DeleteFood.NotFound`.
+The endpoint requires no authentication. This feature is currently backend-only;
+the mobile app does not yet provide a delete action or client integration.
+
 ## Read a diary day
 
 After logging food through `POST /diary-entries`, retrieve a selected calendar day:

@@ -360,6 +360,11 @@ public sealed class LogFoodCommandHandlerTests
         public FoodId? RequestedId { get; private set; }
         public CancellationToken Token { get; private set; }
 
+        public Task<bool> DeleteAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<Food?> GetForUpdateAsync(
             FoodId id,
             CancellationToken cancellationToken

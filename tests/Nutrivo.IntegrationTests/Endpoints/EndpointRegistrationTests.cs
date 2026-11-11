@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Nutrivo.Api.Endpoints;
+using Nutrivo.Api.Endpoints.Foods.DeleteFood;
 using Nutrivo.Api.Endpoints.Diaries.GetDiaryDay;
 using Nutrivo.Api.Endpoints.Diaries.LogFood;
 using Nutrivo.Api.Endpoints.Foods.CreateFood;
@@ -36,7 +37,8 @@ public sealed class EndpointRegistrationTests
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.Equal(6, endpoints.Length);
+        Assert.Equal(7, endpoints.Length);
+        Assert.Single(endpoints.OfType<DeleteFoodEndpoint>());
         Assert.Single(endpoints.OfType<UpdateFoodEndpoint>());
         Assert.Single(endpoints.OfType<GetFoodByIdEndpoint>());
         Assert.Single(endpoints.OfType<GetDiaryDayEndpoint>());
@@ -135,6 +137,11 @@ public sealed class EndpointRegistrationTests
     private sealed class RecordingFoodRepository : IFoodRepository
     {
         public List<Food> Foods { get; } = [];
+
+        public Task<bool> DeleteAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public Task<Food?> GetForUpdateAsync(
             FoodId id,

@@ -6,6 +6,14 @@ namespace Nutrivo.Infrastructure.Persistence.Repositories;
 
 internal sealed class FoodRepository(NutrivoDbContext context) : IFoodRepository
 {
+    public async Task<bool> DeleteAsync(FoodId id, CancellationToken cancellationToken)
+    {
+        return await context
+                .Foods.Where(food => food.Id == id)
+                .ExecuteDeleteAsync(cancellationToken)
+            == 1;
+    }
+
     public Task<Food?> GetByIdAsync(FoodId id, CancellationToken cancellationToken)
     {
         return context

@@ -6,6 +6,7 @@ using Nutrivo.Application.Diaries.GetDiaryDay;
 using Nutrivo.Application.Diaries.LogFood;
 using Nutrivo.Domain.Diaries;
 using Nutrivo.Application.Foods;
+using Nutrivo.Application.Foods.DeleteFood;
 using Nutrivo.Application.Foods.CreateFood;
 using Nutrivo.Application.Foods.GetFoodById;
 using Nutrivo.Application.Foods.SearchFoods;
@@ -64,6 +65,10 @@ public sealed class DependencyInjectionTests
                 == typeof(ICommandHandler<LogFoodCommand, DiaryEntryId>)
         );
 
+        Assert.IsType<DeleteFoodCommandHandler>(
+            firstScope.ServiceProvider
+                .GetRequiredService<ICommandHandler<DeleteFoodCommand, FoodId>>()
+        );
         Assert.IsType<CreateFoodCommandHandler>(first);
         Assert.IsType<GetFoodByIdQueryHandler>(
             firstScope.ServiceProvider
@@ -281,6 +286,11 @@ public sealed class DependencyInjectionTests
 
     public sealed class UnusedFoodRepository : IFoodRepository
     {
+        public Task<bool> DeleteAsync(FoodId id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<Food?> GetForUpdateAsync(
             FoodId id,
             CancellationToken cancellationToken
