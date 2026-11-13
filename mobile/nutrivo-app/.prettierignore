@@ -1,0 +1,14 @@
+# Dependencies and generated Expo / build outputs
+node_modules/
+.expo/
+dist/
+web-build/
+coverage/
+
+# Generated native projects and type declarations
+/android/
+/ios/
+expo-env.d.ts
+
+# Managed by npm
+package-lock.json

@@ -144,6 +144,10 @@ When a domain rule is unclear, state the ambiguity instead of inventing behaviou
 Do not modify unrelated code or perform broad refactorings without necessity.
 
 ## Formatting
+- Frontend formatting is adopted incrementally. After creating or modifying JS, JSX, TS, TSX or JSON files in `mobile/nutrivo-app`, format only those files with the locally installed Prettier before final validation.
+- From `mobile/nutrivo-app`, run `npm run format -- <File1> <File2>` and then `npm run format:check -- <File1> <File2>` with explicit, correctly quoted paths. Do not pass directories or wildcards, or reformat unrelated files. Generated files and `package-lock.json` are excluded through `.prettierignore`.
+- Frontend indentation uses two spaces from the central `.editorconfig`; keep shared formatting values there rather than duplicating them in Prettier configuration. Run `npm run lint` and `npm run typecheck` after frontend changes.
+- Repository-wide frontend formatting checks may report existing deviations during the incremental adoption. Do not fix unrelated files to make the overall check pass.
 - After creating or modifying C# code, run JetBrains CleanupCode before the final build and tests required for the task.
 - Run `dotnet tool restore` from the repository root if the local tools need restoring.
 - From the repository root, run `dotnet jb cleanupcode <File1.cs> <File2.cs>` with explicit, correctly quoted paths to only the C# files created or modified for the task. Do not pass the solution, directories or wildcards.

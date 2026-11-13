@@ -11,6 +11,10 @@ indent_size = 4
 tab_width = 4
 max_line_length = 90
 
+[mobile/nutrivo-app/**]
+indent_size = 2
+tab_width = 2
+
 [*.cs]
 # Namespaces, imports, and local variables.
 csharp_style_namespace_declarations = file_scoped:suggestion

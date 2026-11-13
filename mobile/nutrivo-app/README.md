@@ -97,14 +97,41 @@ Switch back to the computer's LAN address when returning to the phone.
 
 Run from `mobile/nutrivo-app`:
 
-| Command | Purpose |
-| --- | --- |
-| `npm start` | Start Metro in Expo Go mode. |
-| `npm run web -- --port 8081` | Start the Web preview. |
-| `npm run android` | Open Expo Go on a configured Android emulator or connected device. |
-| `npm run ios` | Open Expo Go in an iOS simulator; requires full Xcode. |
-| `npm run lint` | Run ESLint. |
-| `npm run typecheck` | Check TypeScript without emitting files. |
+| Command                           | Purpose                                                            |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `npm start`                       | Start Metro in Expo Go mode.                                       |
+| `npm run web -- --port 8081`      | Start the Web preview.                                             |
+| `npm run android`                 | Open Expo Go on a configured Android emulator or connected device. |
+| `npm run ios`                     | Open Expo Go in an iOS simulator; requires full Xcode.             |
+| `npm run lint`                    | Run ESLint.                                                        |
+| `npm run typecheck`               | Check TypeScript without emitting files.                           |
+| `npm run format -- <files>`       | Format explicitly selected files with local Prettier.              |
+| `npm run format:check -- <files>` | Check formatting of explicitly selected files.                     |
+
+## Formatting and code quality
+
+Prettier formats code using two-space indentation from the central `.editorconfig`.
+ESLint checks code quality; TypeScript checks types.
+
+Format only new or edited files. From `mobile/nutrivo-app`:
+
+```sh
+npm run format -- src/features/foods/FoodRow.tsx
+npm run format:check -- src/features/foods/FoodRow.tsx
+npm run lint
+npm run typecheck
+```
+
+Quote file paths containing spaces or parentheses. The optional full check,
+`npm run format:check -- .`, currently reports existing formatting differences;
+these are migrated gradually.
+
+To format on save, use the locally installed Prettier:
+
+- **Rider:** In **Settings → Languages & Frameworks → JavaScript → Prettier**,
+  select **Automatic Prettier configuration** and **Run on save**.
+- **VS Code:** Open `mobile/nutrivo-app`, install **Prettier - Code formatter**,
+  select it as the default formatter for frontend files and enable **Format On Save**.
 
 ## Documentation
 
