@@ -9,8 +9,10 @@ public sealed class DevelopmentAccessTests
     [Theory]
     [InlineData("http://localhost:8081", "POST")]
     [InlineData("http://localhost:8081", "PUT")]
+    [InlineData("http://localhost:8081", "DELETE")]
     [InlineData("http://127.0.0.1:8081", "POST")]
     [InlineData("http://127.0.0.1:8081", "PUT")]
+    [InlineData("http://127.0.0.1:8081", "DELETE")]
     public async Task Development_AllowsConfiguredWebOriginsAndWritePreflight(
         string origin,
         string method
@@ -25,7 +27,7 @@ public sealed class DevelopmentAccessTests
         );
         using var request = new HttpRequestMessage(
             HttpMethod.Options,
-            method == "PUT" ? $"/foods/{Guid.NewGuid()}" : "/foods"
+            method == "POST" ? "/foods" : $"/foods/{Guid.NewGuid()}"
         );
         request.Headers.Add("Origin", origin);
         request.Headers.Add("Access-Control-Request-Method", method);
@@ -45,6 +47,51 @@ public sealed class DevelopmentAccessTests
             response.Headers.GetValues("Access-Control-Allow-Headers").Single(),
             StringComparison.OrdinalIgnoreCase
         );
+    }
+
+    [Theory]
+    [InlineData("Development", "http://localhost:8081", true)]
+    [InlineData("Development", "http://127.0.0.1:8081", true)]
+    [InlineData("Development", "http://192.168.1.10:8082", true)]
+    [InlineData("Development", "https://untrusted.example", false)]
+    [InlineData("Production", "http://localhost:8081", false)]
+    public async Task DeletePreflight_WithoutContentType_RespectsEnvironmentAndOrigins(
+        string environment,
+        string origin,
+        bool allowed
+    )
+    {
+        await using var factory = CreateFactory(environment)
+            .WithWebHostBuilder(builder =>
+                builder.UseSetting("Cors:AllowedOrigins:2", "http://192.168.1.10:8082")
+            );
+        using var client = factory.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost")
+            }
+        );
+        using var request = new HttpRequestMessage(
+            HttpMethod.Options,
+            $"/foods/{Guid.NewGuid()}"
+        );
+        request.Headers.Add("Origin", origin);
+        request.Headers.Add("Access-Control-Request-Method", "DELETE");
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(allowed, response.Headers.Contains("Access-Control-Allow-Origin"));
+        if (allowed)
+        {
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.Equal(
+                origin,
+                response.Headers.GetValues("Access-Control-Allow-Origin").Single()
+            );
+            Assert.Contains(
+                "DELETE",
+                response.Headers.GetValues("Access-Control-Allow-Methods").Single()
+            );
+        }
     }
 
     [Fact]

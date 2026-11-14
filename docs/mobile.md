@@ -48,7 +48,10 @@ Expo Go on a physical phone.
 ### Web CORS configuration
 
 Development CORS permits `http://localhost:8081` and `http://127.0.0.1:8081`, with
-GET/POST/PUT and Content-Type preflight support. If using another port or a LAN-hosted
+GET/POST/PUT/DELETE and Content-Type preflight support. Food deletion sends a
+bodyless `DELETE /foods/{id}` without Content-Type and accepts `204 No Content`
+without parsing JSON. A timeout or lost response may happen after deletion commits;
+check availability through GET before confirming another attempt. If using another port or a LAN-hosted
 web origin, configure the exact origin through API User Secrets or environment
 configuration, for example from the repository root:
 
@@ -254,7 +257,27 @@ the food details. Cancelling returns without saving. Existing serving IDs are
 preserved, new servings receive IDs from the backend and removed servings are
 omitted from the replacement list. Existing diary snapshots remain unchanged.
 Direct edit links load the food from the API; invalid or unknown IDs show an error.
-“Löschen” remains disabled with “Noch nicht verfügbar”.
+“Löschen” opens a confirmation dialog naming the food and explaining permanent
+catalogue deletion and preservation of diary entries. “Abbrechen”, Escape (Web)
+or hardware Back (Android) cancels without a request. “Dauerhaft löschen” sends
+one bodyless DELETE; both dialog actions, editing and in-app back navigation are
+blocked while pending. DELETE is never automatically retried. The dialog uses
+the existing Modal's Web focus containment/restoration and initially focuses cancel.
+
+After 204, the app discards that food's details and resets all catalogue search
+pages/counts, including inactive diary searches, before returning to `/foods`.
+Earlier reads are cancelled so they cannot restore stale data. Searches restart
+at page one to avoid gaps when deletion shifts the server's pagination. A later
+catalogue GET failure shows read-only recovery and does not repeat DELETE.
+
+`DeleteFood.NotFound` or a refreshed detail returning 404 shows an unavailable
+food state with a route to the catalogue and no edit/delete actions, even when
+details were cached. Other HTTP failures retain a German error and require a new
+confirmation to retry. Connection loss or timeout explains that deletion might
+already have committed; “Verfügbarkeit prüfen” checks GET before enabling a new
+confirmed attempt. A failed check leaves the uncertain state recoverable. Local
+diary state is never cleared by deletion; backend diary snapshots remain governed
+by the existing delete endpoint contract. There is no undo or restoration action.
 
 There are no local catalogue mutations. `FoodsProvider` owns a shared TanStack Query
 client; search and detail hooks use an in-memory cache with 30-second freshness.
@@ -285,9 +308,43 @@ retry once, while HTTP 4xx responses do not retry automatically.
    prefilled form, saved details, refreshed search results and persistence after
    reload. Check direct edit links, invalid/unknown IDs and cancellation. Existing
    diary entries must retain their snapshots; new entries use the updated food.
-   Confirm deletion remains disabled.
+   Confirm diary snapshots still use their recorded values.
 8. Check 320/390-point widths, landscape, large text, keyboard operation and
    VoiceOver/TalkBack. Forms/details must scroll without horizontal overflow.
+
+#### Food deletion acceptance checks (Web and available Expo Go platforms)
+
+Use disposable foods in a separate test database. Observe network requests to
+distinguish DELETE from read-only GET recovery; do not delete real catalogue data.
+
+1. Create a food with servings and record direct/serving diary entries. Open its
+   details, choose “Löschen”, and check the name and diary-preservation explanation.
+   Cancel with the button, Escape or Android Back: verify zero DELETE requests.
+2. Check initial Web focus on cancel, Tab/Shift+Tab containment and restoration
+   to “Löschen” after cancellation. Check 320/390-point widths, landscape, long
+   names, large text, and VoiceOver/TalkBack labels and reachable actions.
+3. Confirm repeatedly under a delayed connection. Verify exactly one bodyless
+   DELETE, visible progress and disabled edit/back/cancel/confirm actions. Accept
+   the empty 204 and return to the catalogue without a JSON parsing error.
+4. Prime multiple catalogue and diary search terms, including more than 20 rows.
+   After deletion, revisit them: no stale selectable row, refreshed counts, page
+   one reloaded and no missing/duplicated remaining foods across later pages.
+   Delay a pre-deletion list/detail GET and verify its response cannot restore it.
+5. Confirm existing local diary entries/totals are unchanged in the current app
+   session. Independently compare backend diary responses before/after deletion;
+   the diary UI still uses local session state and does not prove backend persistence.
+   Reload catalogue/details: the food stays absent and its old link is unavailable.
+6. Delete the displayed food elsewhere before confirming; verify the deletion 404
+   explains unavailability, clears stale searches and offers the overview without
+   claiming this request deleted it. A cached detail refresh returning 404 must
+   also remove edit/delete actions.
+7. Exercise 400/500 errors and loss/timeout before and after a possible commit.
+   Verify no automatic DELETE retry. For uncertainty, fail and then recover
+   “Verfügbarkeit prüfen”: missing leads to unavailable; still existing permits a
+   fresh confirmation. Check request counts throughout.
+8. Fail catalogue GET after a successful 204. Verify overview read retry sends
+   only GET and does not present a deletion failure or restore old pages. Record
+   any native hardware-Back/accessibility checks unavailable in the environment.
 
 ## Validation
 
@@ -422,6 +479,49 @@ the dependency audit is clean.
   Europe/Zurich, America/Los_Angeles and Pacific/Auckland, including invalid dates.
 - Native Expo Go, VoiceOver/TalkBack and native large-text checks remain manual:
   no simulator or connected physical device was available for this validation.
+
+### Food deletion integration validation on 2026-11-13
+
+- Scoped JetBrains CleanupCode completed for `Program.cs` and
+  `DevelopmentAccessTests.cs`. The backend build passed without warnings;
+  all 14 development-access tests and 16 existing delete endpoint/persistence
+  integration tests passed, including the PostgreSQL snapshot-preservation cases.
+- Scoped Prettier formatting/checks, mobile lint and strict TypeScript passed.
+  No frontend automated tests, test framework or runtime dependencies were added.
+- Manual Web checks used a disposable PostgreSQL container, the real API and a
+  temporary local fault proxy. A separate preview copy provided its own public
+  API URL because Expo's virtual environment kept the project's `.env.local`
+  value despite a shell override. The project's local configuration was preserved.
+- Button/Escape cancellation sent zero DELETE requests. Cancel received initial
+  focus; Tab/Shift+Tab stayed in the modal and cancellation restored trigger focus.
+  A double confirmation under delayed response sent exactly one bodyless DELETE;
+  progress and disabled actions were visible, and empty 204 returned to the catalogue.
+- Multiple catalogue/diary search terms refreshed after deletion. With more than
+  20 matches, the remaining 24 foods appeared without duplicates/gaps across both
+  pages. A pre-deletion page-two response delayed until after DELETE did not restore
+  the removed food. Old detail links and reloads showed the unavailable state.
+- A food deleted elsewhere produced `DeleteFood.NotFound` and the unavailable
+  state. Injected 400/500 responses remained recoverable without automatic DELETE
+  retries. Connection loss before and after commit, plus a real 15-second client
+  timeout against a 17-second delayed response, offered GET-only availability
+  checking; failed checks stayed recoverable, existing foods required a fresh
+  confirmation, and missing foods became unavailable. A catalogue read failure
+  after 204 stayed on the overview; retries sent GET without repeating DELETE.
+- Direct and serving-based entries remained visible in the local diary session,
+  with the same 2'311 kcal total after deletion. Separately, the real backend diary
+  JSON for two persisted entries matched its pre-deletion response exactly. This
+  does not imply the mobile diary is backend-persistent; it still uses local state.
+- Dialog layout was checked with a long food name at 320-point width and in
+  landscape; narrow page width matched the viewport. At 320 × 220, scrolling and
+  keyboard operation kept the actions reachable. A separate disposable preview
+  doubled font sizes and line heights: at 320 points the modal's client and scroll
+  widths both remained 296 points, and wrapped actions were reachable by scrolling.
+  This was a modal layout stress check, not a native font-scaling or browser-zoom
+  check; the existing background details page overflowed under those artificial
+  font metrics and was not changed as part of this deletion slice.
+- Native Expo Go, VoiceOver/TalkBack, native large text and Android hardware Back
+  remain unverified here (`xcrun simctl` is unavailable). Chrome access was not
+  granted by Computer Use, so an actual Chrome browser-zoom check was not performed.
 
 ### Food API integration validation on 2026-11-08
 

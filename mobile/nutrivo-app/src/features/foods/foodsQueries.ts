@@ -1,94 +1,147 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useIsClient } from '@/shared/hooks/useIsClient';
+import { ApiError } from '@/shared/api/apiClient';
 
 import type { FoodInput } from './food';
-import { createFood, getFood, searchFoods, updateFood } from './foodsApi';
+import { createFood, deleteFood, getFood, searchFoods, updateFood } from './foodsApi';
 
 const foodKeys = {
-    lists: ['foods', 'list'] as const,
-    list: (search: string) => ['foods', 'list', search] as const,
-    detail: (id: string | undefined) => ['foods', 'detail', id] as const,
+  lists: ['foods', 'list'] as const,
+  list: (search: string) => ['foods', 'list', search] as const,
+  detail: (id: string | undefined) => ['foods', 'detail', id?.toLowerCase()] as const,
 };
 
 function useScreenActive() {
-    const isClient = useIsClient();
-    const [focused, setFocused] = useState(false);
-    useFocusEffect(useCallback(() => {
-        setFocused(true);
-        return () => setFocused(false);
-    }, []));
-    return isClient && focused;
+  const isClient = useIsClient();
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  return isClient && focused;
 }
 
 export function useFoodSearch(search: string, enabled = true) {
-    const active = useScreenActive();
-    const term = search.trim();
-    const [debounced, setDebounced] = useState(term);
-    useEffect(() => {
-        const timer = setTimeout(() => setDebounced(term), 300);
-        return () => clearTimeout(timer);
-    }, [term]);
-    const isDebouncing = term !== debounced;
-    const query = useInfiniteQuery({
-        queryKey: foodKeys.list(term),
-        queryFn: ({ pageParam, signal }) => searchFoods(term, pageParam, signal),
-        initialPageParam: 1,
-        getNextPageParam: last => last.items.length > 0 && last.page * last.pageSize < last.totalCount
-            ? last.page + 1 : undefined,
-        enabled: active && enabled && !isDebouncing,
-    });
-    const visible = enabled && !isDebouncing;
-    return {
-        foods: visible ? query.data?.pages.flatMap(page => page.items) ?? [] : [],
-        totalCount: visible ? query.data?.pages[0]?.totalCount : undefined,
-        loading: enabled && (isDebouncing || query.isPending),
-        error: visible && !query.isFetchNextPageError ? query.error : null,
-        moreError: visible && query.isFetchNextPageError ? query.error : null,
-        loadingMore: visible && query.isFetchingNextPage,
-        retry: () => query.isFetchNextPageError ? query.fetchNextPage({ cancelRefetch: false }) : query.refetch({ cancelRefetch: false }),
-        loadMore: () => {
-            if (active && visible && query.hasNextPage && !query.isFetching && !query.isError) {
-                void query.fetchNextPage({ cancelRefetch: false });
-            }
-        },
-    };
+  const active = useScreenActive();
+  const term = search.trim();
+  const [debounced, setDebounced] = useState(term);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(term), 300);
+    return () => clearTimeout(timer);
+  }, [term]);
+  const isDebouncing = term !== debounced;
+  const query = useInfiniteQuery({
+    queryKey: foodKeys.list(term),
+    queryFn: ({ pageParam, signal }) => searchFoods(term, pageParam, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.items.length > 0 && last.page * last.pageSize < last.totalCount
+        ? last.page + 1
+        : undefined,
+    enabled: active && enabled && !isDebouncing,
+  });
+  const visible = enabled && !isDebouncing;
+  return {
+    foods: visible ? (query.data?.pages.flatMap((page) => page.items) ?? []) : [],
+    totalCount: visible ? query.data?.pages[0]?.totalCount : undefined,
+    loading: enabled && (isDebouncing || query.isPending),
+    error: visible && !query.isFetchNextPageError ? query.error : null,
+    moreError: visible && query.isFetchNextPageError ? query.error : null,
+    loadingMore: visible && query.isFetchingNextPage,
+    retry: () =>
+      query.isFetchNextPageError
+        ? query.fetchNextPage({ cancelRefetch: false })
+        : query.refetch({ cancelRefetch: false }),
+    loadMore: () => {
+      if (active && visible && query.hasNextPage && !query.isFetching && !query.isError) {
+        void query.fetchNextPage({ cancelRefetch: false });
+      }
+    },
+  };
 }
 
 export function useFood(id: string | string[] | undefined, enabled = true) {
-    const active = useScreenActive();
-    const validId = typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-        ? id : undefined;
-    const query = useQuery({
-        queryKey: foodKeys.detail(validId),
-        queryFn: ({ signal }) => getFood(validId!, signal),
-        enabled: active && enabled && validId !== undefined,
-    });
-    return { ...query, invalidId: validId === undefined };
+  const active = useScreenActive();
+  const validId =
+    typeof id === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+      ? id
+      : undefined;
+  const query = useQuery({
+    queryKey: foodKeys.detail(validId),
+    queryFn: ({ signal }) => getFood(validId!, signal),
+    enabled: active && enabled && validId !== undefined,
+  });
+  return { ...query, invalidId: validId === undefined };
 }
 
 export function useCreateFood() {
-    const client = useQueryClient();
-    return useMutation({
-        mutationFn: createFood,
-        retry: false,
-        onSuccess: () => { void client.invalidateQueries({ queryKey: foodKeys.lists }); },
-    });
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: createFood,
+    retry: false,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: foodKeys.lists });
+    },
+  });
 }
 
 export function useUpdateFood(id: string) {
-    const client = useQueryClient();
-    return useMutation({
-        mutationFn: (input: FoodInput) => updateFood(id, input),
-        retry: false,
-        onSuccess: async () => {
-            await client.cancelQueries({ queryKey: foodKeys.detail(id) });
-            await Promise.all([
-                client.invalidateQueries({ queryKey: foodKeys.detail(id), refetchType: 'all' }),
-                client.invalidateQueries({ queryKey: foodKeys.lists }),
-            ]);
-        },
-    });
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FoodInput) => updateFood(id, input),
+    retry: false,
+    onSuccess: async () => {
+      await client.cancelQueries({ queryKey: foodKeys.detail(id) });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: foodKeys.detail(id), refetchType: 'all' }),
+        client.invalidateQueries({ queryKey: foodKeys.lists }),
+      ]);
+    },
+  });
+}
+
+export function useDiscardMissingFood() {
+  const client = useQueryClient();
+  return useCallback(
+    async (id: string) => {
+      await Promise.all([
+        client.cancelQueries({ queryKey: foodKeys.detail(id), exact: true }),
+        client.cancelQueries({ queryKey: foodKeys.lists }),
+      ]);
+      client.removeQueries({ queryKey: foodKeys.detail(id), exact: true });
+      // Drop old pages, including inactive searches, before refetching page one.
+      // A read failure must never change a committed deletion into a mutation failure.
+      void client.resetQueries({ queryKey: foodKeys.lists });
+    },
+    [client],
+  );
+}
+
+export function useDeleteFood() {
+  const discardMissingFood = useDiscardMissingFood();
+  return useMutation({
+    mutationFn: deleteFood,
+    retry: false,
+    onSuccess: (_, id) => discardMissingFood(id),
+    onError: (error, id) => {
+      if (
+        error instanceof ApiError &&
+        error.status === 404 &&
+        error.code === 'DeleteFood.NotFound'
+      ) {
+        return discardMissingFood(id);
+      }
+    },
+  });
 }
