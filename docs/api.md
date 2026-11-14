@@ -298,3 +298,34 @@ request returns `422 Problem Details` with code `GetDiaryDay.Totals.OutOfRange`,
 without partial results or changes to stored entries.
 Technical failures return a generic `500 Problem Details`. The query requires no
 authentication and does not modify entries.
+
+## Historical diary entry management
+
+`GET /diary-entries/{id}` reads an entry independently of the catalogue. The response
+contains `id`, `date`, `mealType`, `quantity`, `referenceUnit`, consumed nutrient fields,
+`servingCount`, `servingSize` and `food`. The `food` object contains the historical
+`id`, `name`, `brand`, `referenceQuantity`, `referenceUnit`, `kilocalories`,
+`proteinGrams`, `carbohydratesGrams` and `fatGrams`. Historical reference values and
+quantities retain full precision; consumed nutrition uses the existing display
+rounding. Missing serving data is null. This works after catalogue changes/deletion.
+
+`PUT /diary-entries/{id}` accepts `{ "quantity": 75 }` for an originally direct entry
+or `{ "servingCount": 0.5 }` for an originally serving-based entry. Exactly one
+positive amount is required. Units and serving definitions stay fixed. Success is
+empty `204` after commit. Recalculation uses the original food/serving snapshots;
+ID, date, meal, capture order and all snapshots remain unchanged. Mixed/missing
+amounts return `400` with `UpdateDiaryEntry.Amount.Invalid`; wrong mode uses
+`DiaryEntry.Amount.ModeMismatch`. Nonpositive/range failures use domain error codes.
+
+`DELETE /diary-entries/{id}` requires no body and returns empty `204` after commit.
+Only that entry is permanently removed; catalogue data and other entries remain.
+Daily and meal totals reflect the update/deletion on the next read.
+
+All three operations return `400` for malformed/empty IDs (`DiaryEntry.Id.Empty`
+for empty UUIDs), `404` for absent targets with `GetDiaryEntryById.NotFound`,
+`UpdateDiaryEntry.NotFound` or `RemoveDiaryEntry.NotFound`, and generic `500`
+Problem Details for unexpected storage failures. Rejected/failed writes do not
+partly change stored data. Concurrent amount saves use last committed write wins;
+an update cannot recreate an entry removed concurrently. Generated OpenAPI lists
+these operations, DTOs, snapshot rules and statuses. Existing day/log APIs remain
+compatible.

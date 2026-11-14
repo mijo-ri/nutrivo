@@ -5,14 +5,15 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 
-import { type DiaryMeal, formatDiaryQuantity } from './diary';
-import { formatNutrition, sumNutrition } from './diaryExample';
+import { type DiaryMeal } from './diary';
+import { DiaryEntryRow } from './DiaryEntryRow';
+import { formatNutrition } from './nutrition';
 import { type MealId } from './diaryMeals';
 
 export function DiaryMealCard({ meal, date }: { meal: DiaryMeal; date: string }) {
   const { width, fontScale } = useWindowDimensions();
   const compactAction = width < 360 || fontScale > 1.2;
-  const nutrition = sumNutrition(meal.entries.map((entry) => entry.nutrition));
+  const nutrition = meal.nutrition;
   const empty = meal.entries.length === 0;
 
   return (
@@ -62,22 +63,7 @@ export function DiaryMealCard({ meal, date }: { meal: DiaryMeal; date: string })
         </View>
       ) : (
         meal.entries.map((entry, index) => (
-          <View
-            key={entry.id}
-            accessible
-            accessibilityLabel={`${entry.food.name}, ${formatDiaryQuantity(entry)}, ${formatNutrition(entry.nutrition.calories)} Kilokalorien`}
-            style={[styles.entry, index % 2 === 1 && styles.alternateEntry]}
-          >
-            <View style={styles.food}>
-              <AppText>{entry.food.name}</AppText>
-              <AppText variant="bodySm" tone="secondary" style={styles.quantity}>
-                {formatDiaryQuantity(entry)}
-              </AppText>
-            </View>
-            <AppText variant="numericSm" style={styles.calories}>
-              {formatNutrition(entry.nutrition.calories)} kcal
-            </AppText>
-          </View>
+          <DiaryEntryRow key={entry.id} entry={entry} alternate={index % 2 === 1} />
         ))
       )}
       <View style={styles.footer}>
@@ -197,29 +183,6 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: theme.colors.onPrimary,
-  },
-  entry: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  alternateEntry: {
-    backgroundColor: theme.colors.surfaceLow,
-  },
-  food: {
-    flex: 1,
-    minWidth: 0,
-  },
-  quantity: {
-    fontVariant: ['tabular-nums'],
-  },
-  calories: {
-    flexShrink: 1,
-    textAlign: 'right',
-    maxWidth: '40%',
   },
   empty: {
     padding: theme.spacing.lg,

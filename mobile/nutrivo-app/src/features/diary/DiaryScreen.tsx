@@ -11,7 +11,9 @@ import { DiaryDatePicker } from './DiaryDatePicker';
 import { DiaryMealCard } from './DiaryMealCard';
 import { DiarySummary } from './DiarySummary';
 import { toDiaryDate } from './diary';
-import { exampleTargets, sumNutrition } from './diaryExample';
+import { exampleTargets } from './diaryExample';
+import { useDiaryDay } from './diaryQueries';
+import { DiaryQueryFeedback } from './DiaryQueryFeedback';
 import { useDiary } from './DiaryProvider';
 
 const dateFormat = new Intl.DateTimeFormat('de-CH', {
@@ -27,8 +29,9 @@ const accessibleDateFormat = new Intl.DateTimeFormat('de-CH', { dateStyle: 'full
 
 export function DiaryScreen() {
   const isClient = useIsClient();
-  const { getDay } = useDiary();
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const { selectedDate, setSelectedDate } = useDiary();
+  const date = toDiaryDate(selectedDate);
+  const query = useDiaryDay(date);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const dateButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
 
@@ -37,11 +40,6 @@ export function DiaryScreen() {
     return null;
   }
 
-  const date = toDiaryDate(selectedDate);
-  const meals = getDay(date);
-  const total = sumNutrition(
-    meals.flatMap((meal) => meal.entries.map((entry) => entry.nutrition)),
-  );
   const isToday = selectedDate.toDateString() === new Date().toDateString();
   const dateLabel = isToday
     ? `Heute, ${dateFormat.format(selectedDate)}`
@@ -106,12 +104,21 @@ export function DiaryScreen() {
           }}
         />
       )}
-      <DiarySummary total={total} targets={exampleTargets} />
-      <View style={styles.meals}>
-        {meals.map((meal) => (
-          <DiaryMealCard key={meal.id} meal={meal} date={date} />
-        ))}
-      </View>
+      <DiaryQueryFeedback
+        loading={query.isPending}
+        error={query.error}
+        onRetry={query.refetch}
+      />
+      {query.data && (
+        <>
+          <DiarySummary total={query.data.total} targets={exampleTargets} />
+          <View style={styles.meals}>
+            {query.data.meals.map((meal) => (
+              <DiaryMealCard key={meal.id} meal={meal} date={date} />
+            ))}
+          </View>
+        </>
+      )}
     </Screen>
   );
 }
@@ -176,9 +183,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     flexShrink: 1,
-    textAlign: 'center',
-  },
-  exampleLabel: {
     textAlign: 'center',
   },
   meals: {

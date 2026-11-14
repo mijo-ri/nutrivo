@@ -4,7 +4,7 @@ import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 import { Card } from '@/shared/ui/Card';
 
-import { formatNutrition, type Nutrition } from './diaryExample';
+import { formatNutrition, type Nutrition } from './nutrition';
 
 type DiarySummaryProps = {
   total: Nutrition;

@@ -278,6 +278,20 @@ public sealed class DependencyInjectionTests
 
     public sealed class UnusedDiaryEntryRepository : IDiaryEntryRepository
     {
+        public Task<DiaryEntry?> GetForUpdateAsync(
+            DiaryEntryId id,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
+        public Task<bool>
+            SaveAsync(DiaryEntry entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<bool> DeleteAsync(
+            DiaryEntryId id,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public Task AddAsync(DiaryEntry entry, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
@@ -338,6 +352,12 @@ public sealed class DependencyInjectionTests
 
     public sealed class UnusedDiaryQueries : IDiaryQueries
     {
+        public Task<Nutrivo.Application.Diaries.GetDiaryEntryById.DiaryEntryDetail?>
+            GetByIdAsync(
+                Nutrivo.Domain.Diaries.DiaryEntryId id,
+                CancellationToken cancellationToken
+            ) => throw new NotSupportedException();
+
         public Task<ImmutableArray<DiaryDayEntry>> GetDayAsync(
             DateOnly date,
             CancellationToken cancellationToken

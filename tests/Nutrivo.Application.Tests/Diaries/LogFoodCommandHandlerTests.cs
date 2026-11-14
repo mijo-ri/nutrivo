@@ -394,6 +394,20 @@ public sealed class LogFoodCommandHandlerTests
 
     private sealed class RecordingDiaryEntryRepository : IDiaryEntryRepository
     {
+        public Task<DiaryEntry?> GetForUpdateAsync(
+            DiaryEntryId id,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
+        public Task<bool>
+            SaveAsync(DiaryEntry entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<bool> DeleteAsync(
+            DiaryEntryId id,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public List<DiaryEntry> Entries { get; } = [];
         public CancellationToken Token { get; private set; }
         public Exception? Failure { get; init; }

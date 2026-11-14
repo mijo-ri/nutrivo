@@ -1,6 +1,6 @@
 import { type Food, formatFoodQuantity, type ServingSize } from '../foods/food';
 import { parseFoodNumber } from '../foods/foodForm';
-import { type Nutrition } from './diaryExample';
+import { type Nutrition } from './nutrition';
 import { type MealId, mealNames } from './diaryMeals';
 
 export type DiaryAmount =
@@ -18,7 +18,6 @@ export type DiaryEntry = Readonly<{
   mealId: MealId;
   food: Readonly<Pick<Food, 'id' | 'name' | 'brand' | 'referenceUnit'>>;
   quantity: number;
-  quantityNote?: string;
   serving?: Readonly<{ size: ServingSize; count: number }>;
   nutrition: Nutrition;
 }>;
@@ -27,6 +26,7 @@ export type DiaryMeal = Readonly<{
   id: MealId;
   name: string;
   entries: readonly DiaryEntry[];
+  nutrition: Nutrition;
 }>;
 
 export type DiaryCalculation =
@@ -131,7 +131,7 @@ export function formatServingSize(
 }
 
 export function formatDiaryQuantity(entry: DiaryEntry): string {
-  const direct = `${formatFoodQuantity(entry.quantity)} ${entry.food.referenceUnit}${entry.quantityNote ? ` ${entry.quantityNote}` : ''}`;
+  const direct = `${formatFoodQuantity(entry.quantity)} ${entry.food.referenceUnit}`;
   if (!entry.serving) {
     return direct;
   }

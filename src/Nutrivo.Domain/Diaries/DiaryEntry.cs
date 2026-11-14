@@ -47,11 +47,73 @@ public sealed class DiaryEntry : AggregateRoot<DiaryEntryId>
     public DateOnly Date { get; }
     public MealType MealType { get; }
     public FoodSnapshot FoodSnapshot { get; } = null!;
-    public decimal Quantity { get; }
+    public decimal Quantity { get; private set; }
     public ReferenceUnit ReferenceUnit { get; }
-    public NutritionalValues NutritionalValues { get; } = null!;
+    public NutritionalValues NutritionalValues { get; private set; } = null!;
     public ServingSizeSnapshot? ServingSizeSnapshot { get; }
-    public decimal? ServingCount { get; }
+    public decimal? ServingCount { get; private set; }
+
+    public Result<DiaryEntryId> UpdateQuantity(decimal quantity)
+    {
+        if (ServingSizeSnapshot is not null)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.AmountModeMismatch);
+        }
+
+        if (quantity <= 0)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.InvalidQuantity);
+        }
+
+        return UpdateAmount(quantity, null);
+    }
+
+    public Result<DiaryEntryId> UpdateServingCount(decimal count)
+    {
+        if (ServingSizeSnapshot is null)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.AmountModeMismatch);
+        }
+
+        if (count <= 0)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.InvalidServingCount);
+        }
+
+        decimal quantity;
+        try
+        {
+            quantity = count * ServingSizeSnapshot.EquivalentQuantity;
+        }
+        catch (OverflowException)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.QuantityOutOfRange);
+        }
+
+        if (quantity <= 0)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.QuantityOutOfRange);
+        }
+
+        return UpdateAmount(quantity, count);
+    }
+
+    private Result<DiaryEntryId> UpdateAmount(decimal quantity, decimal? count)
+    {
+        var nutrition = FoodSnapshot.NutritionalValues.Scale(
+            quantity,
+            FoodSnapshot.ReferenceQuantity
+        );
+        if (nutrition.IsFailure)
+        {
+            return Result<DiaryEntryId>.Failure(DiaryEntryErrors.NutritionOutOfRange);
+        }
+
+        Quantity = quantity;
+        ServingCount = count;
+        NutritionalValues = nutrition.Value;
+        return Result<DiaryEntryId>.Success(Id);
+    }
 
     public static Result<DiaryEntry> Create(
         Food? food,

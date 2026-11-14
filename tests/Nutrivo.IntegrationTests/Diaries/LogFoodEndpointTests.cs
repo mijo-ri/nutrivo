@@ -416,6 +416,20 @@ public sealed class LogFoodEndpointTests(PostgreSqlFixture fixture)
 
     private sealed class FailingDiaryEntryRepository : IDiaryEntryRepository
     {
+        public Task<DiaryEntry?> GetForUpdateAsync(
+            DiaryEntryId id,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
+        public Task<bool>
+            SaveAsync(DiaryEntry entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<bool> DeleteAsync(
+            DiaryEntryId id,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public Task AddAsync(DiaryEntry entry, CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("secret-storage-details");

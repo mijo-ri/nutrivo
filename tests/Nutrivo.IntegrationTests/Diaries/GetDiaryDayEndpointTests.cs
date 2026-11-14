@@ -676,6 +676,12 @@ public sealed class GetDiaryDayEndpointTests(PostgreSqlFixture fixture)
 
     private sealed class FailingDiaryQueries : IDiaryQueries
     {
+        public Task<Nutrivo.Application.Diaries.GetDiaryEntryById.DiaryEntryDetail?>
+            GetByIdAsync(
+                Nutrivo.Domain.Diaries.DiaryEntryId id,
+                CancellationToken cancellationToken
+            ) => throw new NotSupportedException();
+
         public Task<ImmutableArray<DiaryDayEntry>> GetDayAsync(
             DateOnly date,
             CancellationToken cancellationToken

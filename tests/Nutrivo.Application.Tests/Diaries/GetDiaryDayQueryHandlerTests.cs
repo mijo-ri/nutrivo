@@ -287,6 +287,12 @@ public sealed class GetDiaryDayQueryHandlerTests
 
     private sealed class RecordingDiaryQueries : IDiaryQueries
     {
+        public Task<Nutrivo.Application.Diaries.GetDiaryEntryById.DiaryEntryDetail?>
+            GetByIdAsync(
+                Nutrivo.Domain.Diaries.DiaryEntryId id,
+                CancellationToken cancellationToken
+            ) => throw new NotSupportedException();
+
         public List<(DateOnly Date, CancellationToken Token)> Calls { get; } = [];
 
         public ImmutableArray<DiaryDayEntry> Response { get; init; } = [];

@@ -4,9 +4,9 @@ For installation, API connectivity and debugging, start with the
 [mobile README](../mobile/nutrivo-app/README.md). Source paths below are relative
 to `mobile/nutrivo-app`.
 
-The catalogue supports backend search, creation, details and editing. Deletion
-remains disabled. Diary entries and targets are local examples/session state;
-reloading resets the diary while catalogue data persists in PostgreSQL.
+The catalogue supports backend search, creation, details, editing and deletion.
+Diary entries are persisted in PostgreSQL; loading, adding, editing and deleting
+use the API. Only nutrition targets remain illustrative (not persisted).
 
 ## Connection troubleshooting
 
@@ -67,9 +67,9 @@ CORS is not enabled in Production.
 
 ```text
 src/
-  app/                  Root stack with food selection, diary entry creation and food management
+  app/                  Root stack with food selection, diary entry create/edit and food management
     (tabs)/             Tabs: /, /foods and /targets
-  features/diary/       Diary screen, session state and entry creation
+  features/diary/       Persistent diary queries, shared amount form and swipe deletion
   features/foods/       Backend food catalogue, query cache, search and create/edit form
   features/targets/     Nutrition targets placeholder screen
   shared/
@@ -86,7 +86,7 @@ without runtime requests to Google Fonts. Text retains native font scaling.
 Numeric text styles use tabular figures.
 
 The root layout uses an Expo Router stack. Its `(tabs)` group contains JavaScript
-tabs with a shared `AppHeader`; `/food-selection`, `/diary-entry-create`, `/food-create`, `/food-edit` and `/food-details`
+tabs with a shared `AppHeader`; `/food-selection`, `/diary-entry-create`, `/diary-entry-edit`, `/food-create`, `/food-edit` and `/food-details`
 open above them without a tab bar.
 The header shows Nutrivo above the current page title and a circular profile
 icon. The profile is labelled for screen readers and has no action yet. The
@@ -106,12 +106,15 @@ Foods (`/foods`) opens the catalogue; targets (`/targets`) is a placeholder.
 Direct URLs work in the web preview. Foods use a shared API client; authentication
 is not included.
 
-### Local diary
+### Persistent diary
 
-The diary uses local, typed example snapshots in `src/features/diary/`. These
-illustrative values already describe consumed quantities and seed only the local
-calendar date when the app starts. Other dates start empty. New entries and totals
-are held by `DiaryProvider` above the router stack. It runs without the API or database.
+The diary reads `GET /diary-entries?date=YYYY-MM-DD` and displays the stored entries
+in all four meals, preserving backend order. There are no seeded example entries
+or local-only entry IDs. The day and meal summaries use backend totals directly;
+they do not sum rounded entry values. Initial loading, errors/retry and a successfully
+loaded empty day have distinct states. Cached entries can remain visible with a
+read error during a background refresh. `DiaryProvider` retains only selected-date
+and transient add-confirmation UI state; TanStack Query owns server state.
 
 The selected date starts at today in the device's local timezone. The day arrows
 move one local calendar day backward or forward, including future days. Today is
@@ -130,17 +133,24 @@ The native picker uses `@react-native-community/datetimepicker`, installed throu
 `npx expo install` to match the Expo SDK and work in Expo Go. Its native imports
 are excluded from web through a platform-specific component. No custom native
 build is required. Add-entry buttons open food selection for their respective
-meal and selected date. Food rows open quantity entry. There is no persistent
-storage, editing/deletion of saved entries, barcode scanning or voice input.
+meal and selected date. Food rows open quantity entry. Tapping a saved diary row
+opens `/diary-entry-edit?id=<uuid>`. Both entry modes use the same `DiaryAmountForm`.
+Direct entries edit only their original-unit quantity; serving entries edit only
+the captured serving count. Food, date, meal and serving definition are read-only.
+Historical reference values come from entry detail, so editing still works after
+catalogue changes or deletion. Cancel saves nothing; save updates the existing entry
+without changing its identity or position and returns to the same selected day.
 
-The four expanded meal cards contain breakfast (six entries), lunch (four),
-dinner labelled “Nachtessen” (five), and an empty snacks state. Rice and quinoa
-use 80 g dry portions. Meal and day totals are summed from the same snapshots;
-the example day contains 2’157 kcal, 157 g protein, 205 g carbohydrates and 75 g
-fat. Targets are illustrative: 2’400 kcal, 180 g protein, 260 g carbohydrates
-and 70 g fat, leaving 243 kcal. The fat total deliberately exceeds its example
-target; all progress fills are capped at 100%, with the actual totals still
-shown. Display values share a whole-number `de-CH` formatter.
+A left swipe reveals a red “Löschen” action. Swiping alone does not delete or open
+the edit form. The row's “Aktionen für …” button offers the same action to keyboard
+and assistive-technology users. Vertical movement continues to scroll. Deletion
+removes only this diary entry after server confirmation and refreshes daily/meal
+totals; the catalogue food and other occurrences are preserved.
+
+Targets remain illustrative: 2’400 kcal, 180 g protein, 260 g carbohydrates and
+70 g fat. Progress fills are capped at 100%; actual consumption is still shown.
+The diary keeps its whole-number `de-CH` nutrition display. Barcode, voice, offline
+write queues and target persistence remain separate features.
 
 The preview reuses the existing theme, Geist fonts, header, scrolling screen and
 bottom tabs. Macro rails stack on narrow displays or with larger native text;
@@ -202,11 +212,16 @@ the draft. Missing, repeated or invalid route parameters and unknown foods block
 logging and offer a return to the diary. Selection from valid direct links works
 without prior navigation, returning to food selection after save.
 
-Only the selected date and meal receive the entry; their totals update immediately.
-`DiaryProvider` owns session entries; no API request or persistent storage is used.
-Reload/restart resets diary examples, user entries and the selected date. The
-backend catalogue persists independently. Backend domain rules remain authoritative;
-the diary calculation is still a local preview until diary integration is implemented.
+Only the selected date and meal receive the entry. Save posts to the backend;
+success is announced only after a committed entry ID is returned. Entries survive
+reload/restart; the selected date starts at today after a full reload. Backend
+decimal calculations remain authoritative and the client calculation is a preview.
+Pending submissions block duplicate activation and mutations never automatically
+retry. On failure the form retains its input. A lost response explains that the
+write may already have committed and offers “Tagebuch prüfen” before another save.
+A read failure after a committed write is shown as a diary refresh failure, not a
+failed save. For uncertain deletion, “Tagebuch neu laden” reconciles the row before
+allowing another attempt.
 
 #### Quantity entry acceptance checks
 
@@ -223,7 +238,7 @@ the diary calculation is still a local preview until diary integration is implem
 6. Save with a double tap: only one entry is added. Verify search/scroll retention,
    the brief confirmation, cancel/back without saving and date navigation.
 7. Open the creation URL with missing, repeated, invalid or unknown food/meal/date
-   parameters. Check the error and diary return. Reload to verify session reset.
+   parameters. Check the error and diary return. Reload a valid day to verify persistence.
 8. Check keyboard-only operation, 320/390-point widths, landscape, increased text
    and VoiceOver/TalkBack, including selection state and success announcement.
 
@@ -302,8 +317,8 @@ retry once, while HTTP 4xx responses do not retry automatically.
    retained rows/drafts and recovery. Fail detail loading after a successful POST;
    retry must not create another food. Verify missing API URL and unknown UUID states.
 6. Find a created food in diary selection and log direct amounts and fractional
-   servings. Only the selected local date/meal changes; reload resets diary entries
-   while the food remains stored. Open quantity entry directly with a valid food UUID.
+   servings. Only the selected local date/meal changes; reload preserves diary entries
+   and the catalogue food. Open quantity entry directly with a valid food UUID.
 7. Edit a food, change its reference values and add/remove servings. Verify the
    prefilled form, saved details, refreshed search results and persistence after
    reload. Check direct edit links, invalid/unknown IDs and cancellation. Existing
@@ -330,9 +345,9 @@ distinguish DELETE from read-only GET recovery; do not delete real catalogue dat
    After deletion, revisit them: no stale selectable row, refreshed counts, page
    one reloaded and no missing/duplicated remaining foods across later pages.
    Delay a pre-deletion list/detail GET and verify its response cannot restore it.
-5. Confirm existing local diary entries/totals are unchanged in the current app
-   session. Independently compare backend diary responses before/after deletion;
-   the diary UI still uses local session state and does not prove backend persistence.
+5. Confirm persisted diary entries/totals are unchanged after catalogue deletion
+   and browser reload. Open their amount forms and verify original snapshot
+   nutrition is still used when changing the amount.
    Reload catalogue/details: the food stays absent and its old link is unavailable.
 6. Delete the displayed food elsewhere before confirming; verify the deletion 404
    explains unavailability, clears stale searches and offers the overview without
@@ -372,7 +387,7 @@ exports and the manual checks below.
 2. Check the dark background, lavender Nutrivo title, uppercase page title and
    circular profile icon. The profile icon must not trigger an action.
 3. Switch between Tagebuch, Lebensmittel and Ziele. The diary should display
-   its example day; foods shows the catalogue and targets its introduction.
+   its persisted day or an empty state; foods shows the catalogue and targets its introduction.
    Check the matching header title. Exactly one tab is highlighted.
    On Android, Back from another tab should return to Tagebuch.
 4. Confirm that the header clears the notch and status bar and the tab bar
@@ -380,8 +395,8 @@ exports and the manual checks below.
 5. Increase the phone's text size and check wrapping and scrolling, also in
    landscape. No content should be hidden or overlap. Check VoiceOver/TalkBack:
    tabs have names and a selected state, and icon glyphs are not read aloud.
-6. Edit a diary example in the source and verify Fast Refresh updates the screen
-   and totals.
+6. Add and edit a diary entry and verify the row and backend totals refresh
+   without reloading the whole app.
 7. Reload the app and confirm the locally bundled Geist and icon fonts load.
 
 In the web preview, also open `/`, `/foods` and `/targets` directly and reload
@@ -392,24 +407,24 @@ scaling, screen readers and Android Back must be checked on the phone.
 
 ### Diary acceptance checks
 
-1. Verify all 15 food entries and quantities, the four meal headings and the
-   empty snacks state. Meal totals must be 655, 703, 799 and 0 kcal.
-2. Verify the day totals and 243 kcal remaining against the values above.
-   The fat rail must stop at the end of its track despite showing 75/70 g.
+1. Load a known empty date: all four meals must be empty with zero consumed
+   totals. Load a date with entries and compare names/amounts/order with the API.
+2. Add direct and fractional serving entries, then reload. Verify persistence and
+   compare day/meal totals with API totals, including a rounding-sensitive example.
 3. Check 320- and 390-point widths, landscape and increased text size. Long food
    names, quantities and numbers must stay readable without horizontal overflow.
 4. Scroll to snacks; the header and bottom tabs must stay visible and the last
    add-entry button must be reachable above the tabs.
 5. Navigate backward, forward beyond today, and back to today. Verify the “Heute”
    label only appears for today, with short weekdays for other dates. Tap rapidly
-   and confirm each tap moves one calendar day. Only today has seeded examples;
-   other days start empty. Reload and confirm the date resets to today.
+   and confirm each tap moves one calendar day. Each day loads only its own data;
+   no day has frontend-seeded examples. Reload and confirm the date resets to today.
 6. Check month and year boundaries, February 29 in a leap year, and local daylight
    saving transitions. Each tap must move exactly one local calendar day.
 7. Verify both arrows are enabled, named “Vorheriger Tag” and “Nächster Tag”, and
    retain touch targets of at least 44 × 44 points. The central date button is
    enabled, has visible press feedback, and its accessible name includes the year.
-   Add-entry controls open food selection; read-only rows offer no edit action.
+   Add-entry controls open food selection; saved rows open their prefilled amount form.
 8. Open the date picker on iOS and Android in Expo Go and in the browser. Verify
    it starts at the selected diary day. Select a different past or future day and
    confirm; verify the label, then navigate with both arrows. Repeat for a month
@@ -428,6 +443,31 @@ scaling, screen readers and Android Back must be checked on the phone.
     by scrolling vertically; the native calendar also scrolls horizontally if
     its intrinsic width exceeds a narrow window. Use VoiceOver/TalkBack to check
     the dialog and action labels.
+
+### Saved-entry editing and deletion checks
+
+Use the existing `http://localhost:8081` environment and disposable entries. Do not
+configure a separate environment for these checks. If unreachable, record the
+checks that remain for manual verification by the user.
+
+1. Add a direct amount and a fractional serving count on a past/future day. Reload,
+   return to that date and open each row. Verify the original amount is prefilled.
+2. Change only quantity/count, save and compare the same entry ID, order, meal and
+   date with the API. Cancel another edit and confirm no persisted change.
+3. Change or delete the disposable catalogue food. The diary still loads and
+   editing uses its original reference nutrients/serving definition. Test a direct
+   edit URL after reload without relying on cached catalogue data.
+4. Swipe horizontally left: show the red delete action without editing/deleting.
+   Try vertical scrolling and an ordinary tap separately. Activate delete and
+   verify that only the selected occurrence disappears, totals refresh and reload
+   confirms removal. Test the “Aktionen für …” path using only the keyboard.
+5. Try invalid input and failed/uncertain requests. Preserve drafts, block pending
+   double taps and automatic mutation retries, and verify the read-only recovery
+   action before retrying an uncertain write. A failed refresh after success must
+   not invite a second addition. Check a deleted entry's edit URL/not-found state.
+6. Compare create/edit layouts at 320/390-point widths, large text and landscape.
+   Check keyboard navigation and native VoiceOver/TalkBack when available; record
+   unavailable native checks explicitly. No automated frontend tests are added.
 
 ### Food selection acceptance checks
 
@@ -449,6 +489,39 @@ scaling, screen readers and Android Back must be checked on the phone.
 7. Load and reload `/food-selection`, a valid meal/date link and
    `/food-selection?meal=invalid` directly. Invalid context must prevent logging
    and offer a return to the diary. Confirm `/`, `/foods` and `/targets` still work directly.
+
+## Diary persistence validation — 2026-11-14
+
+Verified through the existing `http://localhost:8081` browser app and the API's
+existing local configuration; no separate environment or frontend test runner was
+created. Temporary food/entries were removed after validation.
+
+- An empty database day showed four empty meals and zero consumed totals, with
+  no example entries. Navigating to the previous day kept data separated.
+- Added 75 g of an existing food, reloaded the browser, returned to the same day
+  and verified persistence. Edited it to 50 g, retained the selected date, and
+  observed the updated day/meal total. Reopening used the newly saved amount.
+- A zero amount showed validation and disabled save. Changing a draft and
+  cancelling retained the persisted 50 g.
+- Stopping/restarting only the API exercised a failed save: the 60 g draft stayed
+  visible, save stayed disabled for the uncertain outcome, and “Tagebuch prüfen”
+  returned to the persisted 50 g without an automatic mutation retry.
+- Added 0.5 of a temporary 116 g serving (58 g), deleted only its temporary
+  catalogue food, then edited the historical count to 1.5 (174 g) successfully.
+- Checked create/edit layouts at 390 and 320 pixel widths. Horizontal left drag
+  revealed deletion without opening edit; ordinary vertical scrolling and the
+  keyboard-operated actions menu remained available.
+- Deleted the temporary serving entry through the keyboard delete action and
+  the direct entry after a left swipe. Only the chosen row disappeared each time;
+  day/meal totals returned to zero. Its former edit URL showed not-found.
+- Backend validation: build with zero warnings/errors; 163 domain, 122 application
+  and 243 PostgreSQL/API integration tests passed. CleanupCode, scoped Prettier
+  format/check, mobile lint and TypeScript checks passed.
+
+Native Expo Go, physical-device gestures, landscape/font-scale behavior and
+VoiceOver/TalkBack were not exercised in this browser-only session. Delayed
+responses after an actual committed write were not fault-injected in the browser;
+write/refresh separation and uncertain-outcome handling were reviewed in code.
 
 ## Historical validation records
 

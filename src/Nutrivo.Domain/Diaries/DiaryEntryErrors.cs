@@ -4,6 +4,11 @@ namespace Nutrivo.Domain.Diaries;
 
 public static class DiaryEntryErrors
 {
+    public static readonly DomainError AmountModeMismatch = new(
+        "DiaryEntry.Amount.ModeMismatch",
+        "The amount must use the entry's original direct or serving mode."
+    );
+
     public static readonly DomainError EmptyId = new(
         "DiaryEntry.Id.Empty",
         "The diary entry ID must not be empty."
