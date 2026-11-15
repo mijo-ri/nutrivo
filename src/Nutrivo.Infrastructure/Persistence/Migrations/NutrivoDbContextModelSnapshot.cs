@@ -173,6 +173,36 @@ namespace Nutrivo.Infrastructure.Persistence.Migrations
                     b.ToTable("food_serving_sizes", "public");
                 });
 
+            modelBuilder.Entity("Nutrivo.Domain.Targets.DailyNutritionTarget", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("CarbohydratesGrams")
+                        .HasColumnType("numeric")
+                        .HasColumnName("carbohydrates_grams");
+
+                    b.Property<decimal>("FatGrams")
+                        .HasColumnType("numeric")
+                        .HasColumnName("fat_grams");
+
+                    b.Property<decimal>("Kilocalories")
+                        .HasColumnType("numeric")
+                        .HasColumnName("kilocalories");
+
+                    b.Property<decimal>("ProteinGrams")
+                        .HasColumnType("numeric")
+                        .HasColumnName("protein_grams");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("daily_nutrition_targets", "public", t =>
+                        {
+                            t.HasCheckConstraint("ck_daily_nutrition_targets_singleton", "id = 1");
+                        });
+                });
+
             modelBuilder.Entity("Nutrivo.Domain.Diaries.DiaryEntry", b =>
                 {
                     b.OwnsOne("Nutrivo.Domain.Diaries.FoodSnapshot", "FoodSnapshot", b1 =>

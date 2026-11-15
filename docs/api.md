@@ -329,3 +329,30 @@ partly change stored data. Concurrent amount saves use last committed write wins
 an update cannot recreate an entry removed concurrently. Generated OpenAPI lists
 these operations, DTOs, snapshot rules and statuses. Existing day/log APIs remain
 compatible.
+
+## Daily nutrition targets
+
+`GET /nutrition-targets` returns `200` with `{ "targets": null }` until the first
+save. Otherwise `targets` contains `kilocalories`, `proteinGrams`,
+`carbohydratesGrams` and `fatGrams`, without display rounding. Units are kcal and
+grams per day. Reads never create defaults.
+
+`PUT /nutrition-targets` accepts all four fields as required independent numeric
+values. Each may be zero and must be nonnegative. Missing/null/invalid numbers or
+values outside the .NET decimal range return `400` Problem Details. Negative
+values return a stable `DailyNutritionTarget.<Field>.Negative` code. Invalid
+requests leave storage unchanged. There is no macro-energy equation. Example:
+
+```json
+{"kilocalories":2100.5,"proteinGrams":130,"carbohydratesGrams":240,"fatGrams":65}
+```
+
+The entire current set is created/replaced atomically. `200` returns the saved
+`targets` envelope after commit. Repeating a PUT does not add rows; concurrent
+saves use last committed write wins. Unexpected storage errors return generic
+`500` Problem Details. A lost response may follow a committed save: read current
+targets to reconcile instead of automatically repeating the write.
+
+Current targets apply to every diary date, including past days, without changing
+entries, snapshots or consumed totals. An all-zero set is configured, not unset.
+This local app has no target ownership/history or reset/delete endpoint.

@@ -264,7 +264,7 @@ Represents the user's target values for:
 * carbohydrates
 * fat
 
-Targets may later support effective date ranges rather than overwriting historical targets.
+The local app stores one current target set shared across all diary dates, including past dates. Targets start unset; all four independent kcal/gram values are required and may explicitly be zero. Changing targets changes comparisons only, preserving diary entries and consumed totals. Effective-date history and per-user ownership are deferred.
 
 ## Important Domain Rules
 

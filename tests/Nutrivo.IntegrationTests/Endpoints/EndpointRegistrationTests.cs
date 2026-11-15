@@ -37,7 +37,10 @@ public sealed class EndpointRegistrationTests
         var endpoints = provider.GetServices<IEndpoint>().ToArray();
         var sameEndpoints = provider.GetServices<IEndpoint>().ToArray();
 
-        Assert.Equal(10, endpoints.Length);
+        Assert.Equal(11, endpoints.Length);
+        Assert.Single(
+            endpoints.OfType<Nutrivo.Api.Endpoints.Targets.NutritionTargetEndpoints>()
+        );
         Assert.Single(
             endpoints
                 .OfType<Nutrivo.Api.Endpoints.Diaries.GetDiaryEntryById.

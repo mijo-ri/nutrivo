@@ -149,8 +149,8 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
         await context.Database.MigrateAsync();
 
         var applied = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.Equal(4, applied.Length);
-        Assert.EndsWith("_DiaryEntryCaptureTime", applied[^1]);
+        Assert.Equal(5, applied.Length);
+        Assert.EndsWith("_DailyNutritionTargets", applied[^1]);
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.Equal(0, await context.Foods.CountAsync());
         Assert.Equal(0, await context.DiaryEntries.CountAsync());
@@ -163,7 +163,7 @@ public sealed class MigrationTests(PostgreSqlFixture fixture)
         await migrator.MigrateAsync(Migration.InitialDatabase);
 
         Assert.Empty(await context.Database.GetAppliedMigrationsAsync());
-        Assert.Equal(4, (await context.Database.GetPendingMigrationsAsync()).Count());
+        Assert.Equal(5, (await context.Database.GetPendingMigrationsAsync()).Count());
         Assert.True(
             await context
                 .Database.SqlQuery<bool>(

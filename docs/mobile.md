@@ -6,7 +6,7 @@ to `mobile/nutrivo-app`.
 
 The catalogue supports backend search, creation, details, editing and deletion.
 Diary entries are persisted in PostgreSQL; loading, adding, editing and deleting
-use the API. Only nutrition targets remain illustrative (not persisted).
+use the API. Daily calorie and macro targets are also persisted through the API.
 
 ## Connection troubleshooting
 
@@ -71,7 +71,7 @@ src/
     (tabs)/             Tabs: /, /foods and /targets
   features/diary/       Persistent diary queries, shared amount form and swipe deletion
   features/foods/       Backend food catalogue, query cache, search and create/edit form
-  features/targets/     Nutrition targets placeholder screen
+  features/targets/     Daily nutrition target configuration
   shared/
     theme/              Typed colors, spacing, radii and typography
     ui/                 AppHeader, Screen, AppText and Card
@@ -102,7 +102,7 @@ preloaded alongside Geist with `expo-font`, without remote font requests or a
 custom native build. Decorative icons are hidden from screen readers.
 
 The diary (`/`) is the initial tab and the Android back-navigation anchor.
-Foods (`/foods`) opens the catalogue; targets (`/targets`) is a placeholder.
+Foods (`/foods`) opens the catalogue; targets (`/targets`) loads and edits daily calorie and macro settings.
 Direct URLs work in the web preview. Foods use a shared API client; authentication
 is not included.
 
@@ -119,7 +119,7 @@ and transient add-confirmation UI state; TanStack Query owns server state.
 The selected date starts at today in the device's local timezone. The day arrows
 move one local calendar day backward or forward, including future days. Today is
 labelled “Heute”; other dates show the short weekday, day and month in `de-CH`.
-Entries and totals belong to the selected date; example targets are shared across days.
+Entries and totals belong to the selected date; the current persisted targets are shared across all dates.
 Reloading resets the selected date to today. Tap the central date button to
 select a date directly: Android opens its system date dialog; iOS shows a native
 monthly calendar with “Abbrechen” and “Übernehmen”. The web preview uses a labelled
@@ -147,10 +147,14 @@ and assistive-technology users. Vertical movement continues to scroll. Deletion
 removes only this diary entry after server confirmation and refreshes daily/meal
 totals; the catalogue food and other occurrences are preserved.
 
-Targets remain illustrative: 2’400 kcal, 180 g protein, 260 g carbohydrates and
-70 g fat. Progress fills are capped at 100%; actual consumption is still shown.
-The diary keeps its whole-number `de-CH` nutrition display. Barcode, voice, offline
-write queues and target persistence remain separate features.
+Targets start unset, without seeded or prefilled examples. Ziele saves one current
+set of independent kcal, protein grams, carbohydrate grams and fat grams; explicit
+zero is valid. Current targets also apply to past dates without changing consumed
+totals. Positive-target progress fills are capped at 100%; individual zero targets
+have numeric comparisons without percentage rails. Unset targets show consumption
+and a setup link, without target denominators or remaining calories. The diary
+keeps its whole-number `de-CH` nutrition display. Barcode, voice and offline write
+queues remain separate features.
 
 The preview reuses the existing theme, Geist fonts, header, scrolling screen and
 bottom tabs. Macro rails stack on narrow displays or with larger native text;
@@ -387,7 +391,7 @@ exports and the manual checks below.
 2. Check the dark background, lavender Nutrivo title, uppercase page title and
    circular profile icon. The profile icon must not trigger an action.
 3. Switch between Tagebuch, Lebensmittel and Ziele. The diary should display
-   its persisted day or an empty state; foods shows the catalogue and targets its introduction.
+   its persisted day or an empty state; foods shows the catalogue and targets its empty form or saved values.
    Check the matching header title. Exactly one tab is highlighted.
    On Android, Back from another tab should return to Tagebuch.
 4. Confirm that the header clears the notch and status bar and the tab bar
@@ -429,7 +433,7 @@ scaling, screen readers and Android Back must be checked on the phone.
    it starts at the selected diary day. Select a different past or future day and
    confirm; verify the label, then navigate with both arrows. Repeat for a month
    boundary, year boundary, February 29, and the local daylight saving changes.
-   Entries and totals must match the confirmed date; example targets stay fixed.
+   Entries and totals must match the confirmed date; current targets remain the comparison basis.
 9. Change the draft selection and cancel. Reopen and verify the original diary
    date is still selected. On Android, also cancel with the system Back button.
    Rapid taps and repeated opening/closing must not stack dialogs. Navigate away
@@ -732,3 +736,53 @@ local catalogue and edit/delete previews; they are not current acceptance criter
 - No native simulator was available (`xcrun simctl` is not installed). Native
   safe areas, keyboard avoidance, large text, VoiceOver/TalkBack, Android
   hardware Back and increased browser zoom remain manual acceptance checks.
+
+## Persistent daily targets
+
+Ziele loads `GET /nutrition-targets` and explicitly saves all four required fields
+with `PUT /nutrition-targets`. Input accepts comma or point decimals. Empty fields
+are not converted to zero. Negative/invalid input is rejected. Calories and macros
+are independent; no automatic energy equation changes other fields. Backend
+decimals are stored exactly; mobile retains the existing JavaScript-number/JSON
+precision limits and does not round edit inputs using diary display formatting.
+
+One TanStack Query cache is shared with the diary. Typing and leaving the tab do
+not save. Focus/background refresh does not overwrite a dirty draft. Pending saves
+block repeat activation. Failed writes retain input; uncertain outcomes offer a
+read-only check of persisted values and an explicit adopt-values action. A confirmed
+save remains successful if a later refresh fails. Target-specific loading/errors
+do not block an otherwise loaded diary; cached comparisons carry a warning if a
+refresh fails.
+
+Manual checks use only the existing `http://localhost:8081` environment and its
+configured API/database; do not create another frontend/test environment:
+
+1. With no saved set, confirm four blank fields and diary consumption plus the
+   setup link, without denominators, progress rails or remaining calories.
+2. Submit empty/negative/invalid fields and verify field errors and no saved change.
+   Save independent fractional values with both comma and point notation; reload
+   and verify persistence and unrounded edit values.
+3. Switch to the diary and a past date. Confirm the same targets, unchanged entries
+   and authoritative totals, and date preservation through a Ziele tab round-trip.
+4. Save all-zero and mixed-zero targets. Confirm numeric comparisons, rails only
+   for positive targets, zero remaining at zero consumption and an over-target label
+   for positive consumption against a zero calorie target.
+5. Edit a draft and switch tabs/refocus; verify it survives without changing saved
+   targets. Interrupt API connectivity to verify read errors, cached-data warnings,
+   failed/uncertain save input retention and read-only reconciliation. Restore the
+   existing API and confirm checking does not overwrite the draft or repeat PUT.
+6. Check labels, keyboard navigation, narrow viewport and larger text; verify no
+   horizontal overflow and that save/setup/retry actions remain reachable. Native
+   text scaling and screen-reader behavior require a native-device check.
+
+Verification on 2026-11-14 used the existing localhost:8081 frontend and its
+configured local API/database. Blank initial fields, required-field validation,
+comma/point decimals, independent/mixed-zero/all-zero saves, reload persistence,
+past-date comparisons, draft preservation on focus, offline save/reconciliation,
+cached-target warnings, keyboard focus and the 320-pixel layout were checked.
+Temporary target data was removed afterwards, restoring the initial unset state;
+existing diary entries remained intact. No new frontend environment or automated
+frontend test infrastructure was created. Larger-font/native text scaling and
+native screen-reader checks were not verified: native Chrome control was not
+authorized, and the available in-app browser did not provide working text zoom.
+Task 5.4 remains open for that visual verification.

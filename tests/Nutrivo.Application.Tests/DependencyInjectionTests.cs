@@ -22,6 +22,9 @@ public sealed class DependencyInjectionTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IFoodRepository, UnusedFoodRepository>();
+        services
+            .AddScoped<Nutrivo.Application.Targets.IDailyNutritionTargetRepository,
+                Nutrivo.Application.Tests.Targets.TargetRepositoryStub>();
         services.AddScoped<IDiaryEntryRepository, UnusedDiaryEntryRepository>();
         services.AddScoped<IFoodQueries, UnusedFoodQueries>();
         services.AddScoped<IDiaryQueries, UnusedDiaryQueries>();

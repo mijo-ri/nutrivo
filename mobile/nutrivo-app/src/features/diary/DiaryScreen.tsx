@@ -11,7 +11,11 @@ import { DiaryDatePicker } from './DiaryDatePicker';
 import { DiaryMealCard } from './DiaryMealCard';
 import { DiarySummary } from './DiarySummary';
 import { toDiaryDate } from './diary';
-import { exampleTargets } from './diaryExample';
+import { useTargets } from '../targets/targetsQueries';
+import { TargetQueryFeedback } from '../targets/TargetQueryFeedback';
+import { FoodButton } from '../foods/FoodButton';
+import { Card } from '@/shared/ui/Card';
+import { useRouter } from 'expo-router';
 import { useDiaryDay } from './diaryQueries';
 import { DiaryQueryFeedback } from './DiaryQueryFeedback';
 import { useDiary } from './DiaryProvider';
@@ -32,6 +36,17 @@ export function DiaryScreen() {
   const { selectedDate, setSelectedDate } = useDiary();
   const date = toDiaryDate(selectedDate);
   const query = useDiaryDay(date);
+  const targetQuery = useTargets();
+  const router = useRouter();
+  const savedTargets = targetQuery.data?.targets;
+  const targets = savedTargets
+    ? {
+        calories: savedTargets.kilocalories,
+        protein: savedTargets.proteinGrams,
+        carbohydrates: savedTargets.carbohydratesGrams,
+        fat: savedTargets.fatGrams,
+      }
+    : undefined;
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const dateButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
 
@@ -111,7 +126,23 @@ export function DiaryScreen() {
       />
       {query.data && (
         <>
-          <DiarySummary total={query.data.total} targets={exampleTargets} />
+          <DiarySummary total={query.data.total} targets={targets} />
+          <TargetQueryFeedback
+            loading={targetQuery.isPending}
+            error={targetQuery.error}
+            cached={!!targetQuery.data}
+            onRetry={targetQuery.refetch}
+          />
+          {targetQuery.data?.targets === null && (
+            <Card>
+              <AppText>Noch keine Ziele festgelegt</AppText>
+              <FoodButton
+                label="Ziele festlegen"
+                secondary
+                onPress={() => router.navigate('/targets')}
+              />
+            </Card>
+          )}
           <View style={styles.meals}>
             {query.data.meals.map((meal) => (
               <DiaryMealCard key={meal.id} meal={meal} date={date} />

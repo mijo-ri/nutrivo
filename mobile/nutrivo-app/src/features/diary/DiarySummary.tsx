@@ -8,7 +8,7 @@ import { formatNutrition, type Nutrition } from './nutrition';
 
 type DiarySummaryProps = {
   total: Nutrition;
-  targets: Nutrition;
+  targets?: Nutrition;
 };
 
 const macros = [
@@ -43,15 +43,14 @@ function ProgressRail({
 export function DiarySummary({ total, targets }: DiarySummaryProps) {
   const { width, fontScale } = useWindowDimensions();
   const stacked = width < 360 || fontScale > 1.2;
-  const remaining = targets.calories - total.calories;
+  const remaining = targets ? targets.calories - total.calories : 0;
   const remainingLabel = remaining >= 0 ? 'verbleibend' : 'über Ziel';
-
   return (
     <Card style={styles.card}>
       <View style={[styles.metrics, fontScale > 1.2 && styles.stacked]}>
         <View
           accessible
-          accessibilityLabel={`Gegessen: ${formatNutrition(total.calories)} Kilokalorien. Ziel: ${formatNutrition(targets.calories)} Kilokalorien`}
+          accessibilityLabel={`Gegessen: ${formatNutrition(total.calories)} Kilokalorien${targets ? `. Ziel: ${formatNutrition(targets.calories)} Kilokalorien` : ''}`}
           style={styles.calories}
         >
           <AppText variant="labelCaps" tone="secondary">
@@ -59,42 +58,48 @@ export function DiarySummary({ total, targets }: DiarySummaryProps) {
           </AppText>
           <AppText variant="numericMd">
             {formatNutrition(total.calories)}
-            <AppText variant="numericMd" tone="secondary">
-              {' / '}
-              {formatNutrition(targets.calories)}
-            </AppText>
+            {targets && (
+              <AppText variant="numericMd" tone="secondary">
+                {' '}
+                / {formatNutrition(targets.calories)}
+              </AppText>
+            )}
           </AppText>
         </View>
-        <AppText
-          accessible
-          accessibilityLabel={`${formatNutrition(Math.abs(remaining))} Kilokalorien ${remainingLabel}`}
-          variant="numericMd"
-          tone="accent"
-          style={styles.remaining}
-        >
-          {formatNutrition(Math.abs(remaining))}
-          <AppText variant="bodySm" tone="secondary">
-            {' '}
-            {remainingLabel}
+        {targets && (
+          <AppText
+            accessible
+            accessibilityLabel={`${formatNutrition(Math.abs(remaining))} Kilokalorien ${remainingLabel}`}
+            variant="numericMd"
+            tone="accent"
+            style={styles.remaining}
+          >
+            {formatNutrition(Math.abs(remaining))}
+            <AppText variant="bodySm" tone="secondary">
+              {' '}
+              {remainingLabel}
+            </AppText>
           </AppText>
-        </AppText>
+        )}
       </View>
-      <View
-        accessible
-        accessibilityLabel={`Kalorien: ${formatNutrition(total.calories)} von ${formatNutrition(targets.calories)} Kilokalorien`}
-      >
-        <ProgressRail
-          value={total.calories}
-          target={targets.calories}
-          color={theme.colors.primaryContainer}
-        />
-      </View>
+      {targets && targets.calories > 0 && (
+        <View
+          accessible
+          accessibilityLabel={`Kalorien: ${formatNutrition(total.calories)} von ${formatNutrition(targets.calories)} Kilokalorien`}
+        >
+          <ProgressRail
+            value={total.calories}
+            target={targets.calories}
+            color={theme.colors.primaryContainer}
+          />
+        </View>
+      )}
       <View style={[styles.macros, stacked && styles.stacked]}>
         {macros.map(({ key, label, short, color }) => (
           <View
             key={key}
             accessible
-            accessibilityLabel={`${label}: ${formatNutrition(total[key])} von ${formatNutrition(targets[key])} Gramm${total[key] > targets[key] ? ', über dem Beispielziel' : ''}`}
+            accessibilityLabel={`${label}: ${formatNutrition(total[key])}${targets ? ` von ${formatNutrition(targets[key])}` : ''} Gramm${targets && total[key] > targets[key] ? ', über Ziel' : ''}`}
             style={[styles.macro, stacked && styles.naturalHeight]}
           >
             <View style={styles.macroHeading}>
@@ -104,11 +109,13 @@ export function DiarySummary({ total, targets }: DiarySummaryProps) {
               <AppText variant="numericSm">
                 {formatNutrition(total[key])}
                 <AppText variant="numericSm" tone="secondary">
-                  /{formatNutrition(targets[key])} g
+                  {targets ? `/${formatNutrition(targets[key])} g` : ' g'}
                 </AppText>
               </AppText>
             </View>
-            <ProgressRail value={total[key]} target={targets[key]} color={color} />
+            {targets && targets[key] > 0 && (
+              <ProgressRail value={total[key]} target={targets[key]} color={color} />
+            )}
           </View>
         ))}
       </View>
