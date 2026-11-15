@@ -1,14 +1,34 @@
-import { useRef, useState } from 'react';
-import { Platform, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
+import {
+  BackHandler,
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { type Food, formatFoodNumber, formatFoodQuantity } from '@/features/foods/food';
 import { FoodButton } from '@/features/foods/FoodButton';
 import { FoodFormField } from '@/features/foods/FoodFormField';
+import { FoodPage } from '@/features/foods/FoodPage';
 import { theme } from '@/shared/theme/theme';
 import { AppText } from '@/shared/ui/AppText';
 import { Card } from '@/shared/ui/Card';
 import { type DiaryAmountDraft, formatServingSize, previewDiaryEntry } from './diary';
 import { type MealId, mealNames } from './diaryMeals';
 import { diaryErrorMessage, isUncertainDiaryWrite } from './diaryApi';
+import { DiaryAmountPicker } from './DiaryAmountPicker';
+
+const macros = [
+  { key: 'protein', label: 'Protein', short: 'P', color: theme.colors.protein },
+  {
+    key: 'carbohydrates',
+    label: 'Kohlenhydrate',
+    short: 'K',
+    color: theme.colors.carbohydrates,
+  },
+  { key: 'fat', label: 'Fett', short: 'F', color: theme.colors.fat },
+] as const;
 
 export function DiaryAmountForm({
   food,
@@ -16,6 +36,7 @@ export function DiaryAmountForm({
   dateLabel,
   initialDraft,
   editing = false,
+  feedback,
   onCancel,
   onSubmit,
   onSaved,
@@ -26,6 +47,7 @@ export function DiaryAmountForm({
   dateLabel: string;
   initialDraft?: DiaryAmountDraft;
   editing?: boolean;
+  feedback?: ReactNode;
   onCancel: () => void;
   onSubmit: (draft: DiaryAmountDraft) => Promise<void>;
   onSaved: () => void;
@@ -48,7 +70,20 @@ export function DiaryAmountForm({
   const [saved, setSaved] = useState(false);
   const submitted = useRef(false);
   const result = previewDiaryEntry(food, draft);
+  const preview = result.value;
   const serving = draft.servingSizeId !== undefined;
+  const disabled = pending || saved || isUncertainDiaryWrite(saveError);
+  const { fontScale } = useWindowDimensions();
+  const [macroWidth, setMacroWidth] = useState(0);
+  const stackedMacros = fontScale > 1.2 || (macroWidth > 0 && macroWidth < 240);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android' || !pending) return;
+      const listener = BackHandler.addEventListener('hardwareBackPress', () => true);
+      return () => listener.remove();
+    }, [pending]),
+  );
 
   function changeDraft(next: DiaryAmountDraft) {
     if (pending || saved || isUncertainDiaryWrite(saveError)) return;
@@ -58,7 +93,7 @@ export function DiaryAmountForm({
   }
 
   async function save() {
-    if (submitted.current || !result.value) return;
+    if (submitted.current || !preview || disabled) return;
     setTouched(true);
     submitted.current = true;
     setPending(true);
@@ -76,87 +111,137 @@ export function DiaryAmountForm({
   }
 
   return (
-    <>
-      <Card>
-        <AppText variant="headlineLg" accessibilityRole="header">
-          {food.name}
-        </AppText>
-        {food.brand && <AppText tone="secondary">{food.brand}</AppText>}
-        <AppText tone="accent">
+    <FoodPage
+      title={editing ? 'Menge bearbeiten' : 'Menge erfassen'}
+      onBack={onCancel}
+      backLabel={editing ? 'Zurück ohne Änderung' : 'Zurück ohne Hinzufügen'}
+      backDisabled={pending}
+      contentContainerStyle={styles.content}
+      footer={
+        <View style={styles.actions}>
+          {!!saveError && (
+            <AppText accessibilityRole="alert" style={styles.error}>
+              {diaryErrorMessage(saveError)}
+            </AppText>
+          )}
+          {isUncertainDiaryWrite(saveError) && (
+            <FoodButton label="Tagebuch prüfen" secondary onPress={onReconcile} />
+          )}
+          <FoodButton
+            label={
+              pending
+                ? 'Wird gespeichert …'
+                : editing
+                  ? 'Änderungen speichern'
+                  : 'Hinzufügen'
+            }
+            onPress={() => {
+              void save();
+            }}
+            disabled={!preview || disabled}
+          />
+        </View>
+      }
+    >
+      {feedback}
+      <View style={styles.foodHeading}>
+        <View style={styles.foodTitle}>
+          <AppText
+            variant="headlineMd"
+            accessibilityRole="header"
+            style={styles.foodName}
+          >
+            {food.name}
+          </AppText>
+          {food.brand && (
+            <AppText variant="bodySm" tone="secondary" style={styles.foodName}>
+              {food.brand}
+            </AppText>
+          )}
+        </View>
+        <AppText variant="bodySm" tone="accent">
           {mealNames[mealId]} · {dateLabel}
         </AppText>
-      </Card>
-      <Card>
-        <AppText variant="headlineMd" accessibilityRole="header">
-          Mengenangabe
-        </AppText>
+      </View>
+      <Card style={styles.card}>
         {editing ? (
           <AppText tone="secondary">
             {initialDraft?.servingSizeId && food.servingSizes[0]
               ? formatServingSize(food.servingSizes[0], food.referenceUnit)
               : `Direkt in ${food.referenceUnit === 'g' ? 'Gramm (g)' : 'Milliliter (ml)'}`}
           </AppText>
-        ) : (
-          <View
-            accessibilityRole="radiogroup"
-            accessibilityLabel="Menge oder Portionsgrösse"
-            style={styles.options}
-          >
-            <AmountOption
-              label={`Direkt in ${food.referenceUnit === 'g' ? 'Gramm (g)' : 'Milliliter (ml)'}`}
-              selected={!serving}
-              onPress={() => {
-                if (serving) changeDraft({ value: referenceInput });
-              }}
-            />
-            {food.servingSizes.map((size) => (
-              <AmountOption
-                key={size.id}
-                label={formatServingSize(size, food.referenceUnit)}
-                selected={draft.servingSizeId === size.id}
-                onPress={() => {
-                  if (draft.servingSizeId !== size.id)
-                    changeDraft({ servingSizeId: size.id, value: '1' });
-                }}
-              />
-            ))}
-          </View>
-        )}
+        ) : food.servingSizes.length > 0 ? (
+          <DiaryAmountPicker
+            food={food}
+            servingSizeId={draft.servingSizeId}
+            disabled={disabled}
+            onSelect={(servingSizeId) =>
+              changeDraft(
+                servingSizeId === undefined
+                  ? { value: referenceInput }
+                  : { servingSizeId, value: '1' },
+              )
+            }
+          />
+        ) : null}
         <FoodFormField
           label={serving ? 'Anzahl Portionen' : `Menge (${food.referenceUnit})`}
           numeric
-          disabled={pending || saved || isUncertainDiaryWrite(saveError)}
+          disabled={disabled}
           value={draft.value}
           onChangeText={(value) => changeDraft({ ...draft, value })}
           error={touched ? result.error : undefined}
         />
         {serving && (
           <AppText variant="bodySm" tone="secondary">
-            Die Anzahl gilt für die gesamte gewählte Portion. Auch halbe Portionen wie 0,5
-            sind möglich.
+            Auch 0.5 möglich
           </AppText>
         )}
       </Card>
-      <Card>
-        <AppText variant="headlineMd" accessibilityRole="header">
-          Für deine Menge
-        </AppText>
-        {result.value ? (
+      <Card style={[styles.card, styles.nutritionCard]}>
+        <View style={styles.nutritionHeading}>
+          <AppText variant="bodyMd" accessibilityRole="header">
+            Für deine Menge
+          </AppText>
+          {preview && (
+            <AppText
+              variant="bodySm"
+              tone="secondary"
+              accessibilityLabel={`Gesamtmenge: ${formatFoodQuantity(preview.quantity)} ${food.referenceUnit}`}
+            >
+              {formatFoodQuantity(preview.quantity)} {food.referenceUnit}
+            </AppText>
+          )}
+        </View>
+        {preview ? (
           <>
-            <AppText tone="secondary">
-              Gesamtmenge: {formatFoodQuantity(result.value.quantity)}{' '}
-              {food.referenceUnit}
-            </AppText>
             <AppText variant="numericLg" tone="accent">
-              {formatFoodNumber(result.value.nutrition.calories)} kcal
+              {formatFoodNumber(preview.nutrition.calories)}
+              <AppText variant="bodySm" tone="secondary">
+                {' '}
+                kcal
+              </AppText>
             </AppText>
-            <AppText>
-              Protein: {formatFoodNumber(result.value.nutrition.protein)} g
-            </AppText>
-            <AppText>
-              Kohlenhydrate: {formatFoodNumber(result.value.nutrition.carbohydrates)} g
-            </AppText>
-            <AppText>Fett: {formatFoodNumber(result.value.nutrition.fat)} g</AppText>
+            <View
+              onLayout={(event) => setMacroWidth(event.nativeEvent.layout.width)}
+              style={[styles.macros, stackedMacros && styles.stackedMacros]}
+            >
+              {macros.map(({ key, label, short, color }) => (
+                <View
+                  key={key}
+                  accessible
+                  accessibilityLabel={`${label}: ${formatFoodNumber(preview.nutrition[key])} Gramm`}
+                  style={[styles.macro, stackedMacros && styles.stackedMacro]}
+                >
+                  <AppText variant="labelCaps" style={{ color }}>
+                    {stackedMacros ? label : short}
+                  </AppText>
+                  <AppText variant="numericSm">
+                    {formatFoodNumber(preview.nutrition[key])} g
+                  </AppText>
+                </View>
+              ))}
+            </View>
           </>
         ) : (
           <AppText tone="secondary">
@@ -164,138 +249,42 @@ export function DiaryAmountForm({
           </AppText>
         )}
       </Card>
-      {!!saveError && (
-        <AppText accessibilityRole="alert" style={styles.error}>
-          {diaryErrorMessage(saveError)}
-        </AppText>
-      )}
-      {isUncertainDiaryWrite(saveError) && (
-        <FoodButton label="Tagebuch prüfen" secondary onPress={onReconcile} />
-      )}
-      <FoodButton
-        label={
-          pending ? 'Wird gespeichert …' : editing ? 'Änderungen speichern' : 'Hinzufügen'
-        }
-        onPress={() => {
-          void save();
-        }}
-        disabled={!result.value || saved || pending || isUncertainDiaryWrite(saveError)}
-      />
-      <FoodButton label="Abbrechen" secondary onPress={onCancel} disabled={pending} />
-    </>
-  );
-}
-
-function AmountOption({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  // React Native Web activates radio Pressables with Enter, but not Space/arrows.
-  const keyboardProps: Pick<PressableProps, 'onKeyDown'> =
-    Platform.OS === 'web'
-      ? {
-          onKeyDown: (event) => {
-            const { key, repeat } = event.nativeEvent;
-            if (key === ' ') {
-              event.preventDefault();
-              if (!repeat) onPress();
-              return;
-            }
-            if (
-              ![
-                'ArrowDown',
-                'ArrowRight',
-                'ArrowUp',
-                'ArrowLeft',
-                'Home',
-                'End',
-              ].includes(key)
-            ) {
-              return;
-            }
-            event.preventDefault();
-            const target = event.currentTarget as unknown as HTMLElement;
-            const options = Array.from(
-              target.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [],
-            );
-            const index = options.indexOf(target);
-            const next =
-              key === 'Home'
-                ? 0
-                : key === 'End'
-                  ? options.length - 1
-                  : (index +
-                      (key === 'ArrowDown' || key === 'ArrowRight' ? 1 : -1) +
-                      options.length) %
-                    options.length;
-            options[next]?.focus();
-            options[next]?.click();
-          },
-        }
-      : {};
-
-  return (
-    <Pressable
-      {...keyboardProps}
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityLabel={label}
-      accessibilityState={{ checked: selected }}
-      aria-checked={selected}
-      style={({ pressed }) => [
-        styles.option,
-        selected && styles.selected,
-        pressed && styles.pressed,
-      ]}
-    >
-      <View
-        style={[styles.radio, selected && styles.checked]}
-        accessible={false}
-        aria-hidden
-      >
-        {selected && <View style={styles.dot} />}
-      </View>
-      <AppText style={styles.optionLabel} tone={selected ? 'accent' : 'default'}>
-        {label}
-      </AppText>
-    </Pressable>
+    </FoodPage>
   );
 }
 
 const styles = StyleSheet.create({
-  options: { gap: theme.spacing.sm },
-  option: {
-    minHeight: 48,
+  content: {
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
+  foodHeading: { gap: theme.spacing.xs },
+  foodTitle: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.outlineVariant,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surfaceLow,
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: theme.spacing.sm,
   },
-  optionLabel: { flex: 1 },
-  selected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceHigh,
+  foodName: { flexShrink: 1 },
+  card: { padding: theme.spacing.md, gap: theme.spacing.md },
+  nutritionCard: { gap: theme.spacing.sm },
+  nutritionHeading: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: theme.spacing.xs,
   },
-  pressed: { opacity: 0.75 },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: theme.colors.outline,
-    alignItems: 'center',
-    justifyContent: 'center',
+  macros: { flexDirection: 'row', gap: theme.spacing.md },
+  macro: { flex: 1, minWidth: 0, gap: theme.spacing.xs },
+  stackedMacros: { flexDirection: 'column' },
+  stackedMacro: {
+    flex: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  checked: { borderColor: theme.colors.primary },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.primary },
+  actions: { gap: theme.spacing.sm },
   error: { color: theme.colors.error },
 });

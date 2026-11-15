@@ -786,3 +786,43 @@ frontend test infrastructure was created. Larger-font/native text scaling and
 native screen-reader checks were not verified: native Chrome control was not
 authorized, and the available in-app browser did not provide working text zoom.
 Task 5.4 remains open for that visual verification.
+
+## Compact diary quantity entry
+
+Adding and editing diary entries share a compact food heading, quantity card and
+nutrition preview. Calories are emphasized; protein, carbohydrates and fat use the
+diary colours in three columns, stacking at increased native font scale or when
+the available width is below 240 points. Preview values retain the food number
+formatting with up to two decimal places, without daily targets or progress rails.
+
+When adding a food with serving sizes, a labelled selector opens a bounded,
+scrollable dialog. Selecting an option applies it immediately; cancellation,
+Escape and Android Back dismiss without changing the quantity. Direct input
+starts at the reference quantity and a newly selected serving starts at one,
+as before. Without serving sizes, only the quantity input is shown. Editing keeps
+the entry's saved quantity type and nutrition snapshot.
+
+The primary action and write errors sit below the scrollable content, within the
+page's safe-area and keyboard-avoidance layout. The header Back action replaces
+the duplicate Cancel button and is disabled while saving, as is Android hardware
+Back. Unknown write outcomes still lock editing/repeated saving and offer
+“Tagebuch prüfen”. Existing food pages do not opt into the footer.
+
+Verification on 2026-11-15:
+
+- Prettier checks for the five changed TSX files, lint, TypeScript and production
+  exports for iOS, Android and Web passed.
+- Browser checks used the existing localhost:8081 frontend and local API at
+  320 × 568, 390 × 844 and 844 × 390. Normal entry forms fit the small portrait
+  viewport, while long names/serving labels scroll without horizontal overflow
+  or hiding the primary action. A 280-point viewport exercised stacked macros.
+- Checked g/ml input, comma decimals, half servings, invalid zero input, 13 serving
+  options with long labels, dialog cancellation/Escape, keyboard selection and
+  focus restoration. A food without servings omits the selector.
+- A double-click created exactly one temporary entry: half of “2 EL = 30 ml”
+  saved 15 ml and 6 kcal. Editing to 1.5 servings saved 45 ml and 18 kcal. An API
+  validation failure appeared beside the save action and cleared after correction.
+- Temporary food/diary data was removed afterwards. Native keyboard avoidance,
+  safe areas, increased native text scale, VoiceOver/TalkBack, Android hardware
+  Back and interrupted-connection reconciliation still require manual checks.
+  No automated frontend tests or test infrastructure were introduced.

@@ -1,13 +1,15 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { useRouter } from 'expo-router';
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren, ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  type StyleProp,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,11 +22,15 @@ export function FoodPage({
   onBack,
   backLabel = 'Zurück zu den Lebensmitteln',
   backDisabled = false,
+  footer,
+  contentContainerStyle,
 }: PropsWithChildren<{
   title: string;
   onBack?: () => void;
   backLabel?: string;
   backDisabled?: boolean;
+  footer?: ReactNode;
+  contentContainerStyle?: StyleProp<ViewStyle>;
 }>) {
   const router = useRouter();
 
@@ -56,12 +62,14 @@ export function FoodPage({
           </AppText>
         </View>
         <ScrollView
-          contentContainerStyle={styles.content}
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, contentContainerStyle]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
           {children}
         </ScrollView>
+        {footer != null && <View style={styles.footer}>{footer}</View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -88,6 +96,17 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.full,
   },
   pressed: { backgroundColor: theme.colors.surfaceHighest },
+  scroll: { flex: 1, minHeight: 0 },
+  footer: {
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+    flexShrink: 0,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.outlineVariant,
+  },
   content: {
     width: '100%',
     maxWidth: 640,

@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type ReactNode } from 'react';
 
 import { FoodButton } from '@/features/foods/FoodButton';
 import { FoodPage } from '@/features/foods/FoodPage';
@@ -39,39 +40,45 @@ export function DiaryEntryCreateScreen() {
     }
   }
 
+  const feedback = isClient && validContext && !query.invalidId && (
+    <FoodQueryFeedback
+      loading={query.isPending}
+      error={query.error}
+      onRetry={query.refetch}
+    />
+  );
+
+  if (isClient && valid) {
+    return (
+      <CreateEntryForm
+        key={`${food.id}-${meal}-${date}`}
+        food={food}
+        mealId={meal}
+        date={date}
+        feedback={feedback}
+        onCancel={goBack}
+        onAdded={() =>
+          router.dismissTo({ pathname: '/food-selection', params: { meal, date } })
+        }
+      />
+    );
+  }
+
   return (
     <FoodPage title="Menge erfassen" onBack={goBack} backLabel="Zurück ohne Hinzufügen">
-      {isClient && validContext && !query.invalidId && (
-        <FoodQueryFeedback
-          loading={query.isPending}
-          error={query.error}
-          onRetry={query.refetch}
-        />
+      {feedback}
+      {isClient && (!validContext || query.invalidId) && (
+        <Card>
+          <AppText variant="headlineMd" accessibilityRole="header">
+            Eintrag nicht möglich
+          </AppText>
+          <AppText tone="secondary">
+            Lebensmittel, Datum oder Mahlzeit ist nicht verfügbar. Bitte wähle im Tagebuch
+            erneut eine Mahlzeit und ein Lebensmittel aus.
+          </AppText>
+          <FoodButton label="Zum Tagebuch" onPress={() => router.dismissTo('/')} />
+        </Card>
       )}
-      {isClient &&
-        (valid ? (
-          <CreateEntryForm
-            key={`${food.id}-${meal}-${date}`}
-            food={food}
-            mealId={meal}
-            date={date}
-            onCancel={goBack}
-            onAdded={() =>
-              router.dismissTo({ pathname: '/food-selection', params: { meal, date } })
-            }
-          />
-        ) : !validContext || query.invalidId ? (
-          <Card>
-            <AppText variant="headlineMd" accessibilityRole="header">
-              Eintrag nicht möglich
-            </AppText>
-            <AppText tone="secondary">
-              Lebensmittel, Datum oder Mahlzeit ist nicht verfügbar. Bitte wähle im
-              Tagebuch erneut eine Mahlzeit und ein Lebensmittel aus.
-            </AppText>
-            <FoodButton label="Zum Tagebuch" onPress={() => router.dismissTo('/')} />
-          </Card>
-        ) : null)}
     </FoodPage>
   );
 }
@@ -80,12 +87,14 @@ function CreateEntryForm({
   food,
   mealId,
   date,
+  feedback,
   onCancel,
   onAdded,
 }: {
   food: Food;
   mealId: MealId;
   date: string;
+  feedback?: ReactNode;
   onCancel: () => void;
   onAdded: () => void;
 }) {
@@ -97,6 +106,7 @@ function CreateEntryForm({
       food={food}
       mealId={mealId}
       dateLabel={dateFormat.format(parseDiaryDate(date)!)}
+      feedback={feedback}
       onCancel={onCancel}
       onSaved={onAdded}
       onSubmit={async (draft) => {

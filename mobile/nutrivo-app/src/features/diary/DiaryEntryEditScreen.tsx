@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type ReactNode } from 'react';
 import { FoodPage } from '../foods/FoodPage';
 import { FoodButton } from '../foods/FoodButton';
 import { AppText } from '@/shared/ui/AppText';
@@ -22,8 +23,8 @@ export function DiaryEntryEditScreen() {
     if (router.canGoBack()) router.back();
     else router.replace('/');
   }
-  return (
-    <FoodPage title="Menge bearbeiten" onBack={goBack} backLabel="Zurück ohne Änderung">
+  const feedback = (
+    <>
       {isClient &&
         (query.invalidId ? (
           <AppText accessibilityRole="alert">Ungültiger Tagebucheintrag.</AppText>
@@ -34,19 +35,43 @@ export function DiaryEntryEditScreen() {
             onRetry={query.refetch}
           />
         ))}
-      {isClient &&
-        query.data &&
-        query.isFetchedAfterMount &&
-        !(query.error && 'status' in query.error && query.error.status === 404) && (
-          <EditForm key={query.data.entry.id} detail={query.data} onCancel={goBack} />
-        )}
       {isClient && (query.invalidId || query.isError) && (
         <FoodButton label="Zum Tagebuch" secondary onPress={goBack} />
       )}
+    </>
+  );
+
+  if (
+    isClient &&
+    query.data &&
+    query.isFetchedAfterMount &&
+    !(query.error && 'status' in query.error && query.error.status === 404)
+  ) {
+    return (
+      <EditForm
+        key={query.data.entry.id}
+        detail={query.data}
+        onCancel={goBack}
+        feedback={feedback}
+      />
+    );
+  }
+
+  return (
+    <FoodPage title="Menge bearbeiten" onBack={goBack} backLabel="Zurück ohne Änderung">
+      {feedback}
     </FoodPage>
   );
 }
-function EditForm({ detail, onCancel }: { detail: DiaryDetail; onCancel: () => void }) {
+function EditForm({
+  detail,
+  onCancel,
+  feedback,
+}: {
+  detail: DiaryDetail;
+  onCancel: () => void;
+  feedback: ReactNode;
+}) {
   const { entry, food, initialDraft } = detail;
   const router = useRouter();
   const mutation = useUpdateDiaryEntry(entry.id, entry.date);
@@ -62,6 +87,7 @@ function EditForm({ detail, onCancel }: { detail: DiaryDetail; onCancel: () => v
       dateLabel={dateFormat.format(parseDiaryDate(entry.date)!)}
       initialDraft={initialDraft}
       editing
+      feedback={feedback}
       onCancel={onCancel}
       onSubmit={(draft) => mutation.mutateAsync(draft)}
       onSaved={returnToDay}
