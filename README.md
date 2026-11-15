@@ -118,3 +118,23 @@ Run from the repository root:
 - [Migrations, formatting and backend validation](docs/development.md)
 - [Mobile design, troubleshooting and validation](docs/mobile.md)
 - [Architecture decisions](docs/adr/)
+
+## Backlog
+- [x] create solution structure
+- [x] configure PostgreSQL and EF Core
+- [x] model `Food` and nutritional values
+- [x] implement `CreateFood`
+- [x] implement food search
+- [x] model diary entries
+- [x] implement `LogFood`
+- [x] implement daily diary query
+- [x] calculate daily totals
+- [x] build first React Native diary screen
+- [x] edit/delete entries
+- [x] add nutrition targets
+- [ ] add recent foods and favourites
+- [ ] add barcode integration
+- [ ] add external food provider
+- [ ] add voice tracking
+- [ ] add authentication
+- [ ] deploy a production-like environment
